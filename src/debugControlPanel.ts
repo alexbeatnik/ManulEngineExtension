@@ -12,13 +12,13 @@
 import * as vscode from "vscode";
 import { exec, execFile } from "child_process";
 
-export type PauseChoice = "next" | "continue" | "highlight" | "debug-stop" | "stop-test";
+export type PauseChoice = "next" | "continue" | "debug-stop" | "stop-test";
 
-const NEXT_LABEL  = "⏭  Next Step";
-const CONT_LABEL  = "▶  Continue All";
-const HIGH_LABEL  = "👁  Highlight Element";
-const DSTOP_LABEL = "⏹  Debug Stop";
-const SSTOP_LABEL = "🛑  Stop Test";
+const NEXT_LABEL    = "⏭  Next Step";
+const CONT_LABEL    = "▶  Continue All";
+const EXPLAIN_LABEL = "🔮  Explain Next Step";
+const DSTOP_LABEL   = "⏹  Debug Stop";
+const SSTOP_LABEL   = "🛑  Stop Test";
 
 /** Best-effort: raise the editor window above other apps on Linux. */
 function tryRaiseWindow(stepIdx: number, stepText: string): void {
@@ -59,7 +59,11 @@ export class DebugControlPanel {
    * ignoreFocusOut=true keeps it visible even when the browser is active.
    * Calling abort() (e.g. from Stop button) hides it immediately.
    */
-  showPause(step: string, idx: number): Promise<PauseChoice> {
+  showPause(
+    step: string,
+    idx: number,
+    onExplainRequest?: () => void
+  ): Promise<PauseChoice> {
     // Raise OS window and show system notification (fires async, best-effort).
     tryRaiseWindow(idx, step);
 
@@ -72,7 +76,7 @@ export class DebugControlPanel {
       qp.items = [
         { label: NEXT_LABEL },
         { label: CONT_LABEL },
-        { label: HIGH_LABEL,  description: "Scroll the browser to the highlighted element" },
+        { label: EXPLAIN_LABEL, description: "Show heuristic score breakdown for this step" },
         { label: DSTOP_LABEL, description: "Skip all remaining breakpoints and run to end" },
         { label: SSTOP_LABEL, description: "Abort the test immediately" },
       ];
@@ -89,8 +93,11 @@ export class DebugControlPanel {
 
       qp.onDidAccept(() => {
         const label = qp.selectedItems[0]?.label;
-        if (label === HIGH_LABEL) {
-          done("highlight");
+        if (label === EXPLAIN_LABEL) {
+          // Show score panel but keep the QuickPick open — the pause is not
+          // over; the user still needs to pick an action to advance.
+          onExplainRequest?.();
+          return;
         } else if (label === DSTOP_LABEL) {
           done("debug-stop");
         } else if (label === SSTOP_LABEL) {

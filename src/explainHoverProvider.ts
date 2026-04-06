@@ -150,6 +150,13 @@ export class ExplainOutputParser {
     }
   }
 
+  /** Return cached explanation markdown for a given 1-based step number, or undefined. */
+  getExplanationForStep(stepNumber: number): string | undefined {
+    const line = this._stepLineMap.get(stepNumber);
+    if (line === undefined) { return undefined; }
+    return getExplanation(this._fileUri, line);
+  }
+
   /** Feed a single stdout line (without trailing newline). */
   feed(line: string): void {
     // Track current step number

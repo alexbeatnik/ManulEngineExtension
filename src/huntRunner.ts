@@ -351,7 +351,7 @@ export function runHuntFileDebugPanel(
   onData: (chunk: string) => void,
   token?: vscode.CancellationToken,
   breakLines?: number[],
-  onPause?: (step: string, idx: number) => Promise<"next" | "continue" | "highlight" | "debug-stop" | "stop-test">
+  onPause?: (step: string, idx: number) => Promise<"next" | "continue" | "debug-stop" | "stop-test">
 ): Promise<number> {
   return new Promise((resolve, reject) => {
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(huntFile));
@@ -423,7 +423,7 @@ export function runHuntFileDebugPanel(
           // Show the Webview panel (if onPause provided) or fall back to
           // a notification.  Either way write the response to stdin so the
           // blocked Python readline() unblocks.
-          const pausePromise: Thenable<"next" | "continue" | "highlight" | "debug-stop" | "stop-test"> = onPause
+          const pausePromise: Thenable<"next" | "continue" | "debug-stop" | "stop-test"> = onPause
             ? onPause(step, idx)
             : (() => {
                 const shortStep = step.length > 100 ? step.substring(0, 100) + "…" : step;
@@ -444,7 +444,7 @@ export function runHuntFileDebugPanel(
             0,
             vscode.workspace.getConfiguration("manulEngine").get<number>("debugPauseTimeoutSeconds", 300)
           );
-          const _timedPause: Promise<"next" | "continue" | "highlight" | "debug-stop" | "stop-test"> =
+          const _timedPause: Promise<"next" | "continue" | "debug-stop" | "stop-test"> =
             _pauseTimeoutSec > 0
               ? Promise.race([
                   Promise.resolve(pausePromise),
@@ -459,7 +459,7 @@ export function runHuntFileDebugPanel(
                 ])
               : Promise.resolve(pausePromise);
           _timedPause.then(
-            (choice: "next" | "continue" | "highlight" | "debug-stop" | "stop-test") => {
+            (choice: "next" | "continue" | "debug-stop" | "stop-test") => {
               // Guard against writing to stdin after the process has already
               // exited or the stream has been closed/destroyed (e.g. user
               // pressed Stop while the QuickPick was open).
