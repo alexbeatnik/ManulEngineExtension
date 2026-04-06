@@ -72,7 +72,7 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
     const csp = `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';`;
 
     // Generate buttons from the shared DSL contract — single source of truth.
-    // Markup mirrors Studio's StepBuilder.tsx: icon span + label span + inline tooltip.
+    // Markup uses icon span + label span + inline tooltip.
     const buttons = MANUL_DSL_COMMANDS.map(
       (cmd) =>
         `<div class="sb-tooltip-wrap" data-cmd-id="${cmd.id}">

@@ -20,12 +20,12 @@ const HIGH_LABEL  = "👁  Highlight Element";
 const DSTOP_LABEL = "⏹  Debug Stop";
 const SSTOP_LABEL = "🛑  Stop Test";
 
-/** Best-effort: raise the VS Code window above other apps on Linux. */
+/** Best-effort: raise the editor window above other apps on Linux. */
 function tryRaiseWindow(stepIdx: number, stepText: string): void {
   if (process.platform !== "linux") { return; }
   // X11: xdotool activates by WM_CLASS, fallback wmctrl by title.
   exec(
-    'xdotool search --onlyvisible --class "Code" windowactivate 2>/dev/null || wmctrl -a "Visual Studio Code" 2>/dev/null || true',
+    'xdotool search --onlyvisible --class "Code" windowactivate 2>/dev/null || wmctrl -a "Code" 2>/dev/null || true',
     () => { /* ignore errors */ }
   );
   // OS notification flashes taskbar on both X11 and Wayland.
