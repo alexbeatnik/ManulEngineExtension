@@ -13,7 +13,7 @@ import {
   FAIL_LINE_RE,
   BLOCK_LOG_RE,
   validateHuntDocument,
-} from '../src/index'
+} from '../shared'
 
 // ── parseEngineLogLine ──────────────────────────────────────────────────────
 

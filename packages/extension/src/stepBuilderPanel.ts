@@ -10,7 +10,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import * as fs from "fs";
 import { spawn } from "child_process";
-import { MANUL_DSL_COMMANDS } from "@manul/shared";
+import { MANUL_DSL_COMMANDS } from "./shared";
 import { findManulExecutable } from "./huntRunner";
 import { getConfigFileName, TERMINAL_NAME } from "./constants";
 
@@ -30,7 +30,7 @@ const TEARDOWN_SCAFFOLD = `[TEARDOWN]
 
 const DEMO_TEST_FILENAMES = ["demoqa.hunt", "mega.hunt", "rahul.hunt", "saucedemo.hunt"] as const;
 
-// STEP_TEMPLATES removed — buttons are now generated from MANUL_DSL_COMMANDS in @manul/shared.
+// STEP_TEMPLATES removed — buttons are now generated from the extension-local MANUL_DSL_COMMANDS registry.
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 

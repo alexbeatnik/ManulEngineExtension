@@ -2,15 +2,13 @@
   "name": "manul-engine-extension-workspace",
   "version": "0.0.9.26",
   "private": true,
-  "description": "ManulEngine VS Code extension workspace with shared contracts and parsers",
+  "description": "ManulEngine VS Code extension workspace",
   "workspaces": [
-    "packages/shared",
     "packages/extension"
   ],
   "scripts": {
-    "build": "npm run build -w @manul/shared && npm run compile -w manul-engine",
+    "build": "npm run compile -w manul-engine",
     "test": "npm run test --workspaces --if-present",
-    "build:shared": "npm run build -w @manul/shared",
     "build:extension": "npm run compile -w manul-engine"
   }
 }

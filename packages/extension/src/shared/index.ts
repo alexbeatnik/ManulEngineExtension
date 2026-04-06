@@ -1,51 +1,30 @@
 // ---------------------------------------------------------------------------
-// @manul/shared — Constants, types, and parsers shared across the extension
+// Extension-local runtime contracts, parsers, and validators
 // ---------------------------------------------------------------------------
 
-// ── Engine version ──────────────────────────────────────────────────────────
-
-/** Minimum ManulEngine CLI version required by this release of Manul tooling. */
 export const MIN_MANUL_ENGINE_VERSION = '0.0.9.26'
 
-// ── Common types ────────────────────────────────────────────────────────────
-
-/** Status of an individual step inside a .hunt test run */
 export type StepStatus = 'pending' | 'running' | 'pass' | 'fail' | 'skipped'
 
-/** Structured step payload shared between backend event parsing and UI trees. */
 export interface TestStep {
   id: string
   description: string
   status: StepStatus
 }
 
-/** Block-level status emitted by the hierarchical engine logger. */
 export interface TestBlock {
   id: string
   status: StepStatus
 }
 
-/** High-level run status for a .hunt file execution */
 export type RunStatus = 'running' | 'success' | 'error' | 'cancelled'
 
-// ── Constants ───────────────────────────────────────────────────────────────
-
-/** Default configuration file name for ManulEngine projects */
 export const DEFAULT_CONFIG_FILENAME = 'manul_engine_configuration.json'
-
-/** Debug pause protocol marker emitted by the Python engine on stdout */
 export const PAUSE_MARKER = '\x00MANUL_DEBUG_PAUSE\x00'
-
-/** Regex matching engine step lines and capturing id + description. */
 export const STEP_LINE_RE = /(?:\[[^\]]*\s*)?(STEP\s+\d+)(?:\s*[:@][^\]]*\])?\s*[:\s]\s*(.+)/i
-
-/** Regex matching fail markers in engine output */
 export const FAIL_LINE_RE = /❌|FAIL(?:ED)?|ERROR/i
-
-/** Regex matching the new hierarchical block logger lines. */
 export const BLOCK_LOG_RE = /^\s*\[(?:[^\]]*\s+)?BLOCK\s+(START|PASS|FAIL)\]\s+(.+?)\s*$/i
 
-/** Parse a single engine stdout line into a structured block update, if present. */
 export function parseEngineLogLine(line: string): TestBlock | null {
   const match = line.match(BLOCK_LOG_RE)
   if (!match) {
@@ -80,42 +59,23 @@ export type {
   ManulDslContract,
 } from './huntValidator'
 
-// ── Version helpers ─────────────────────────────────────────────────────────
-
-/**
- * Parse a dotted version string into an array of integers for comparison.
- * Handles 2-, 3-, and 4-segment versions (e.g. "0.0.9.10" → [0, 0, 9, 10]).
- */
 export function parseVersion(version: string): number[] {
   return version
     .replace(/^v/i, '')
     .split('.')
-    .map((s) => {
-      const n = parseInt(s, 10)
-      return Number.isNaN(n) ? 0 : n
+    .map((segment) => {
+      const parsed = parseInt(segment, 10)
+      return Number.isNaN(parsed) ? 0 : parsed
     })
 }
 
-// ── DSL command registry ────────────────────────────────────────────────────
-
-/**
- * A single Manul DSL command entry that serves as the single source of truth
- * for both the Step Builder UI panel and Monaco editor snippet autocompletion.
- */
 export interface ManulDslCommand {
-  /** Unique kebab-case identifier. */
   id: string
-  /** Short human-readable name shown on the Step Builder button. */
   label: string
-  /** Emoji icon for the Step Builder button. */
   icon: string
-  /** Text inserted into the editor when triggered from the Step Builder panel. */
   uiText: string
-  /** Monaco snippet string with ${N:placeholder} tab stops. */
   snippet: string
-  /** One-sentence description shown in the Step Builder tooltip. */
   description: string
-  /** Concrete example line shown in the Step Builder tooltip. */
   example: string
 }
 
@@ -168,7 +128,6 @@ const INSIDE_ROW_CONTEXT_RE = new RegExp(
   'i'
 )
 
-/** Return contextual qualifier suggestions for the current .hunt line prefix. */
 export function getManulDslContextSuggestions(linePrefix: string): ManulDslContextSuggestion[] {
   const prefix = linePrefix.trimEnd()
 
@@ -202,7 +161,6 @@ export function getManulDslContextSuggestions(linePrefix: string): ManulDslConte
   return []
 }
 
-/** All supported Manul DSL commands — single source of truth for the Step Builder and Monaco autocompletion. */
 export const MANUL_DSL_COMMANDS: ManulDslCommand[] = [
   { id: 'navigate',              label: 'Navigate',              icon: '🌐', uiText: "NAVIGATE to ''",                                                  snippet: 'NAVIGATE to ${1:url}',                                                        description: 'Navigates the browser to a specific URL and waits for DOM settlement.',                 example: 'NAVIGATE to https://example.com/login' },
   { id: 'open-app',              label: 'Open App',              icon: '📦', uiText: 'OPEN APP',                                                         snippet: 'OPEN APP',                                                                    description: 'Attaches to an Electron or desktop app window instead of navigating to a URL.',        example: 'OPEN APP' },
@@ -240,19 +198,15 @@ export const MANUL_DSL_COMMANDS: ManulDslCommand[] = [
   { id: 'done',                  label: 'Done',                  icon: '🏁', uiText: 'DONE.',                                                            snippet: 'DONE.',                                                                       description: 'Explicitly ends the mission.',                                                           example: 'DONE.' },
 ]
 
-// ── Version helpers ─────────────────────────────────────────────────────────
-
-/**
- * Compare two version strings.
- * Returns negative if a < b, 0 if equal, positive if a > b.
- */
 export function compareVersions(a: string, b: string): number {
   const pa = parseVersion(a)
   const pb = parseVersion(b)
   const len = Math.max(pa.length, pb.length)
-  for (let i = 0; i < len; i++) {
-    const diff = (pa[i] ?? 0) - (pb[i] ?? 0)
-    if (diff !== 0) return diff
+  for (let index = 0; index < len; index += 1) {
+    const diff = (pa[index] ?? 0) - (pb[index] ?? 0)
+    if (diff !== 0) {
+      return diff
+    }
   }
   return 0
 }

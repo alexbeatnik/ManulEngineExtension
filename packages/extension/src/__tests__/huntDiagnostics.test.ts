@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import * as vscode from 'vscode'
 import { registerHuntDiagnostics } from '../huntDiagnostics'
-import * as manulShared from '@manul/shared'
+import * as manulShared from '../shared'
 
-vi.mock('@manul/shared', () => ({
+vi.mock('../shared', () => ({
   validateHuntDocument: vi.fn(),
 }))
 
@@ -42,7 +42,7 @@ describe('huntDiagnostics', () => {
     expect(setMock).not.toHaveBeenCalled()
   })
 
-  it('validates hunt documents using @manul/shared', () => {
+  it('validates hunt documents using the extension-local shared module', () => {
     vi.mocked(manulShared.validateHuntDocument).mockReturnValue([
       {
         line: 2,

@@ -341,7 +341,7 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run build -w @manul/shared && npm run compile && node ./scripts/prepare-vsce-runtime.mjs",
+    "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
@@ -357,8 +357,5 @@
     "@vscode/vsce": "^3.7.1",
     "typescript": "^5.3.x",
     "vitest": "^4.1.0"
-  },
-  "dependencies": {
-    "@manul/shared": "*"
   }
 }

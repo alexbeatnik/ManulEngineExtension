@@ -139,7 +139,7 @@ The extension registers a `CompletionItemProvider` for `.hunt` files that offers
 - **Hook blocks** — `[SETUP]` and `[TEARDOWN]` for pre/post execution steps
 - **Current DSL snippets** — every command from the shared `MANUL_DSL_COMMANDS` registry is offered as a snippet with tab-stop placeholders, including the newer wait/mock/debug/python forms
 
-Completions are sourced from `@manul/shared`, so adding a new DSL command to the shared package automatically exposes it in the completion list and the Step Builder sidebar — no manual sync needed.
+Completions are sourced from the extension-local shared runtime module, so adding a new DSL command there automatically exposes it in the completion list and the Step Builder sidebar — no manual sync needed.
 
 ### 🔍 Visual Explainability (Hover Tooltips)
 
