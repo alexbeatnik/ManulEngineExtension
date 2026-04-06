@@ -1,0 +1,29 @@
+node_modules/
+out/
+dist/
+*.tsbuildinfo
+
+# Build artifacts
+packages/shared/dist/
+packages/extension/out/
+packages/extension/*.vsix
+
+# ManulEngine runtime data
+cache/
+reports/
+pages.json
+packages/extension/reports/
+
+# Logs
+*.log
+**/.vsix-build-*/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
