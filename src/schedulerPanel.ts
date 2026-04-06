@@ -35,6 +35,13 @@ interface RunHistoryRecord {
   duration_ms: number;
 }
 
+function isRunHistoryRecord(value: unknown): value is RunHistoryRecord {
+  if (typeof value !== 'object' || value === null) { return false; }
+  const r = value as Record<string, unknown>;
+  // At least one of name/file must be a non-empty string for the record to be usable.
+  return typeof r.name === 'string' || typeof r.file === 'string';
+}
+
 // ── File scanner ─────────────────────────────────────────────────────────────
 
 /**
@@ -131,8 +138,9 @@ function readRunHistory(
 
     for (const line of lines) {
       try {
-        const rec: RunHistoryRecord = JSON.parse(line);
-        if (!rec.name && !rec.file) { continue; }
+        const parsed: unknown = JSON.parse(line);
+        if (!isRunHistoryRecord(parsed)) { continue; }
+        const rec = parsed;
         // Key by relative file path when available (avoids basename collisions)
         if (rec.file) {
           const relFile = path.isAbsolute(rec.file)

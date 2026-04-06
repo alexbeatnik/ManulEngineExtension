@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import * as fs from 'fs'
+import * as path from 'path'
 import {
   RE_METADATA,
   RE_HOOK_OPEN,
@@ -15,6 +17,9 @@ import {
   readConfigField,
   getConfigFileName,
 } from '../constants'
+
+vi.mock('fs')
+vi.mock('path')
 
 // ── Regex patterns ──────────────────────────────────────────────────────────
 
@@ -151,49 +156,42 @@ describe('constants', () => {
 
 describe('readConfigField', () => {
   beforeEach(() => {
-    vi.restoreAllMocks()
+    vi.resetAllMocks()
   })
 
   it('returns default when config file does not exist', () => {
+    // readFileSync auto-mock returns undefined → JSON.parse throws → default returned
     const result = readConfigField('/nonexistent/path', 'key', 'fallback')
     expect(result).toBe('fallback')
   })
 
   it('returns the value from a valid config file', () => {
-    const fs = require('fs')
-    const path = require('path')
-    vi.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify({ baseUrl: 'https://example.com' }))
-    vi.spyOn(path, 'join').mockReturnValue('/fake/manul_engine_configuration.json')
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ baseUrl: 'https://example.com' }))
+    vi.mocked(path.join).mockReturnValue('/fake/manul_engine_configuration.json')
 
     const result = readConfigField('/fake', 'baseUrl', '')
     expect(result).toBe('https://example.com')
   })
 
   it('returns default when the key is missing', () => {
-    const fs = require('fs')
-    const path = require('path')
-    vi.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify({ otherKey: 42 }))
-    vi.spyOn(path, 'join').mockReturnValue('/fake/manul_engine_configuration.json')
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ otherKey: 42 }))
+    vi.mocked(path.join).mockReturnValue('/fake/manul_engine_configuration.json')
 
     const result = readConfigField('/fake', 'missingKey', 'default')
     expect(result).toBe('default')
   })
 
   it('returns default when value type mismatches', () => {
-    const fs = require('fs')
-    const path = require('path')
-    vi.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify({ count: 'not-a-number' }))
-    vi.spyOn(path, 'join').mockReturnValue('/fake/manul_engine_configuration.json')
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ count: 'not-a-number' }))
+    vi.mocked(path.join).mockReturnValue('/fake/manul_engine_configuration.json')
 
     const result = readConfigField('/fake', 'count', 42)
     expect(result).toBe(42)
   })
 
   it('returns default when JSON is malformed', () => {
-    const fs = require('fs')
-    const path = require('path')
-    vi.spyOn(fs, 'readFileSync').mockReturnValue('{invalid json}')
-    vi.spyOn(path, 'join').mockReturnValue('/fake/manul_engine_configuration.json')
+    vi.mocked(fs.readFileSync).mockReturnValue('{invalid json}')
+    vi.mocked(path.join).mockReturnValue('/fake/manul_engine_configuration.json')
 
     const result = readConfigField('/fake', 'key', 'safe')
     expect(result).toBe('safe')

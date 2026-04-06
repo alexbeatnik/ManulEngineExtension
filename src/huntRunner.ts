@@ -4,6 +4,58 @@ import * as os from "os";
 import { execFile, spawn, ChildProcess } from "child_process";
 import * as vscode from "vscode";
 import { PAUSE_MARKER, DEBUG_TERMINAL_NAME, PYTHON_ENV_FLAGS, getConfigFileName } from "./constants";
+import { MIN_MANUL_ENGINE_VERSION, parseVersion } from "./shared";
+
+/**
+ * Quote a single argument for safe use inside a terminal send-text command.
+ *
+ * Uses single-quoting so spaces and most shell metacharacters are treated
+ * literally by the target shell.  Embedded single quotes are escaped with
+ * the conventional shell idiom so no metacharacter can break out of the
+ * quoted string.
+ *
+ * @param arg    – the argument to quote (e.g. a file path or executable path)
+ * @param psMode – true when the target shell is PowerShell / pwsh
+ */
+function quoteShellArg(arg: string, psMode: boolean): string {
+  if (psMode) {
+    // PowerShell single-quoted strings: double up embedded single quotes.
+    return "'" + arg.replace(/'/g, "''") + "'";
+  }
+  // POSIX (bash / zsh / fish / sh): use '\'' to embed a literal single quote.
+  return "'" + arg.replace(/'/g, "'\\''" ) + "'";
+}
+
+/**
+ * Run `manulExe --version`, parse the reported version, and compare it
+ * against MIN_MANUL_ENGINE_VERSION.  Returns a user-facing warning string
+ * when the installed version is too old; undefined when the version is
+ * acceptable or cannot be determined (e.g. old engine without --version).
+ */
+export async function checkManulEngineVersion(manulExe: string): Promise<string | undefined> {
+  return new Promise<string | undefined>((resolve) => {
+    execFile(manulExe, ['--version'], { timeout: 5000 }, (_err, stdout) => {
+      const match = stdout.trim().match(/(\d+(?:\.\d+)+)/);
+      if (!match) { resolve(undefined); return; }
+      const installed = match[1];
+      const iv = parseVersion(installed);
+      const mv = parseVersion(MIN_MANUL_ENGINE_VERSION);
+      for (let i = 0; i < Math.max(iv.length, mv.length); i++) {
+        const a = iv[i] ?? 0;
+        const b = mv[i] ?? 0;
+        if (a < b) {
+          resolve(
+            `v${installed} is installed but v${MIN_MANUL_ENGINE_VERSION} or newer is required. ` +
+            `Run: pip install --upgrade "manul-engine==${MIN_MANUL_ENGINE_VERSION}"`
+          );
+          return;
+        }
+        if (a > b) { break; }
+      }
+      resolve(undefined);
+    });
+  });
+}
 
 /**
  * Read the manulEngine.browser setting and return the CLI flags needed.
@@ -386,7 +438,27 @@ export function runHuntFileDebugPanel(
                     choice === "▶ Continue All" ? "continue" : "next"
                   );
               })();
-          pausePromise.then(
+          // Race the pause promise against an idle timeout so the Python process
+          // is never blocked indefinitely when the user walks away or the UI freezes.
+          const _pauseTimeoutSec = Math.max(
+            0,
+            vscode.workspace.getConfiguration("manulEngine").get<number>("debugPauseTimeoutSeconds", 300)
+          );
+          const _timedPause: Promise<"next" | "continue" | "highlight" | "debug-stop" | "stop-test"> =
+            _pauseTimeoutSec > 0
+              ? Promise.race([
+                  Promise.resolve(pausePromise),
+                  new Promise<"continue">((res) =>
+                    setTimeout(() => {
+                      vscode.window.setStatusBarMessage(
+                        `⏱ ManulEngine: debug pause timed out — resuming.`, 5000
+                      );
+                      res("continue");
+                    }, _pauseTimeoutSec * 1000)
+                  ),
+                ])
+              : Promise.resolve(pausePromise);
+          _timedPause.then(
             (choice: "next" | "continue" | "highlight" | "debug-stop" | "stop-test") => {
               // Guard against writing to stdin after the process has already
               // exited or the stream has been closed/destroyed (e.g. user
@@ -445,8 +517,8 @@ export async function runHuntFileDebugInTerminal(
   const termBrowserFlags = getBrowserFlags();
   const browserFlag = termBrowserFlags.args.length > 0 ? ` ${termBrowserFlags.args.join(" ")}` : "";
   const command = isPowerShell
-    ? `& "${manulExe}"${browserFlag} --debug${breakFlag} "${uri.fsPath}"`
-    : `"${manulExe}"${browserFlag} --debug${breakFlag} "${uri.fsPath}"`;
+    ? `& ${quoteShellArg(manulExe, true)}${browserFlag} --debug${breakFlag} ${quoteShellArg(uri.fsPath, true)}`
+    : `${quoteShellArg(manulExe, false)}${browserFlag} --debug${breakFlag} ${quoteShellArg(uri.fsPath, false)}`;
   const terminal = vscode.window.createTerminal({
     name: DEBUG_TERMINAL_NAME,
     cwd: workspaceRoot,
