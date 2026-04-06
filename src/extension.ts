@@ -23,7 +23,7 @@ import { SchedulerPanel } from "./schedulerPanel";
 import { ExplainHoverProvider, ExplainOutputParser, clearExplanations } from "./explainHoverProvider";
 import { registerHuntDiagnostics } from "./huntDiagnostics";
 import { registerDoctorCommand } from "./manulDoctor";
-import { showExplainScorePanel, disposeExplainScorePanel } from "./explainScorePanel";
+import { disposeExplainScorePanel } from "./explainScorePanel";
 
 export function activate(context: vscode.ExtensionContext): void {
   registerDoctorCommand(context);
@@ -143,7 +143,7 @@ export function activate(context: vscode.ExtensionContext): void {
             });
           },
           (result) => {
-            showExplainScorePanel(result);
+            panel.updateExplainResult(result);
           }
         );
         debugOutputChannel.appendLine("\n✅ Debug run complete.");

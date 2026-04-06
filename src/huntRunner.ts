@@ -404,6 +404,10 @@ export function runHuntFileDebugPanel(
     // Line-buffer stdout so we can detect pause markers reliably even if data
     // arrives in chunks smaller than a full line.
     let stdoutBuf = "";
+    // Track whether we're currently inside a pause (waiting for user action).
+    // The engine re-emits the PAUSE_MARKER after non-breaking tokens like
+    // explain-next — we must ignore re-emitted markers while a pause is active.
+    let pauseActive = false;
     proc.stdout?.on("data", (d: Buffer) => {
       stdoutBuf += d.toString();
       const lines = stdoutBuf.split("\n");
@@ -423,6 +427,10 @@ export function runHuntFileDebugPanel(
         // ── Debug pause marker ───────────────────────────────────────────
         const markerIdx = line.indexOf(PAUSE_MARKER);
         if (markerIdx !== -1) {
+          // The engine re-emits the pause marker after non-breaking tokens
+          // (explain-next, highlight, explain).  Ignore the re-emit.
+          if (pauseActive) { continue; }
+          pauseActive = true;
           // Parse the JSON payload that follows the pause marker.
           const jsonPart = line.substring(markerIdx + PAUSE_MARKER.length);
           let step = "";
@@ -482,6 +490,10 @@ export function runHuntFileDebugPanel(
               : Promise.resolve(pausePromise);
           _timedPause.then(
             (choice: "next" | "continue" | "debug-stop" | "stop-test") => {
+              // The pause is resolved — the next PAUSE_MARKER we see will
+              // be for a genuinely new step, not a re-emit after explain-next.
+              pauseActive = false;
+
               // Guard against writing to stdin after the process has already
               // exited or the stream has been closed/destroyed (e.g. user
               // pressed Stop while the QuickPick was open).

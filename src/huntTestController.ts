@@ -6,7 +6,7 @@ import { findManulExecutable, runHunt, runHuntFileDebugPanel, getHuntBreakpointL
 import { DebugControlPanel } from "./debugControlPanel";
 import { TERMINAL_NAME, getConfigFileName } from "./constants";
 import { ExplainOutputParser, clearExplanations } from "./explainHoverProvider";
-import { showExplainScorePanel, disposeExplainScorePanel } from "./explainScorePanel";
+import { disposeExplainScorePanel } from "./explainScorePanel";
 
 // ── Concurrency helpers ────────────────────────────────────────────────────
 
@@ -407,7 +407,7 @@ export function createHuntTestController(
             });
           },
           (result) => {
-            showExplainScorePanel(result);
+            panel.updateExplainResult(result);
           });
       };
 

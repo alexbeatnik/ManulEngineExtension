@@ -11,6 +11,7 @@
  */
 import * as vscode from "vscode";
 import { exec, execFile } from "child_process";
+import type { ExplainNextResult } from "./shared";
 
 export type PauseChoice = "next" | "continue" | "debug-stop" | "stop-test";
 
@@ -55,6 +56,41 @@ export class DebugControlPanel {
   // ── Public API ─────────────────────────────────────────────────────────────
 
   /**
+   * Update the active QuickPick with explain-next results from the engine.
+   * Called by the onExplainNextResult callback when the engine responds.
+   * The result is shown inline — no modal, no hide/show cycle.
+   */
+  updateExplainResult(result: ExplainNextResult): void {
+    const qp = this._activeQp;
+    if (!qp) { return; }
+
+    qp.busy = false;
+
+    const found = result.target_found ? "✅" : "❌";
+    const target = result.target_element || "(no match)";
+    const summary = `Score: ${result.score}/10 (${result.confidence_label}) ${found} ${target}`;
+
+    const parts: string[] = [];
+    if (result.explanation) { parts.push(result.explanation); }
+    if (result.risk) { parts.push(`Risk: ${result.risk}`); }
+    if (result.suggestion) { parts.push(`Suggestion: ${result.suggestion}`); }
+    if (result.heuristic_score !== null && result.heuristic_score !== undefined) {
+      parts.push(`Heuristic: ${result.heuristic_score}`);
+    }
+    if (result.heuristic_match) { parts.push(`Match: ${result.heuristic_match}`); }
+    const detail = parts.join(" · ");
+
+    // Rebuild items to update the Explain entry's description & detail.
+    qp.items = [
+      { label: NEXT_LABEL },
+      { label: CONT_LABEL },
+      { label: EXPLAIN_LABEL, description: summary, detail },
+      { label: DSTOP_LABEL, description: "Skip all remaining breakpoints and run to end" },
+      { label: SSTOP_LABEL, description: "Abort the test immediately" },
+    ];
+  }
+
+  /**
    * Show a floating QuickPick overlay for the current debug step.
    * ignoreFocusOut=true keeps it visible even when the browser is active.
    * Calling abort() (e.g. from Stop button) hides it immediately.
@@ -94,9 +130,11 @@ export class DebugControlPanel {
       qp.onDidAccept(() => {
         const label = qp.selectedItems[0]?.label;
         if (label === EXPLAIN_LABEL) {
-          // Show score panel but keep the QuickPick open — the pause is not
-          // over; the user still needs to pick an action to advance.
+          qp.busy = true;
           onExplainRequest?.();
+          // Clear selection so the same item can be clicked again.
+          qp.activeItems = [];
+          qp.value = "";
           return;
         } else if (label === DSTOP_LABEL) {
           done("debug-stop");

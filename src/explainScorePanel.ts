@@ -1,56 +1,21 @@
 /**
- * explainScorePanel.ts — Modal dialog that displays the heuristic score
- * breakdown for the current debug step.
+ * explainScorePanel.ts — Explain-next result display helpers.
  *
- * Opened from the "🔮 Explain Next Step" button in the DebugControlPanel
- * QuickPick.  Uses a native VS Code modal dialog so it floats above
- * everything.  The QuickPick stays open behind it — once the modal is
- * dismissed the user is back at the pause controls.
+ * Results are now shown inline in the DebugControlPanel QuickPick via
+ * `panel.updateExplainResult()`.  This module retains backward-compatible
+ * exports so existing callers don't break.
  */
 
-import * as vscode from "vscode";
 import type { ExplainNextResult } from "./shared";
 
-/**
- * Show a modal dialog with the WhatIfResult from the engine's
- * explain-next evaluation.  Can be called repeatedly.
- */
+/** @deprecated — results are now shown inline in the QuickPick. No-op. */
 export async function showExplainScorePanel(
-  result: ExplainNextResult,
+  _result: ExplainNextResult,
 ): Promise<void> {
-  const shortStep = result.step.length > 80 ? result.step.slice(0, 80) + "…" : result.step;
-
-  const lines: string[] = [];
-  lines.push(`Confidence: ${result.score}/10 (${result.confidence_label})`);
-  lines.push(`Target found: ${result.target_found ? "Yes" : "No"}`);
-  if (result.target_element) {
-    lines.push(`Target element: ${result.target_element}`);
-  }
-  if (result.heuristic_score !== null) {
-    lines.push(`Heuristic score: ${result.heuristic_score}`);
-  }
-  if (result.heuristic_match) {
-    lines.push(`Best heuristic match: ${result.heuristic_match}`);
-  }
-  lines.push("");
-  lines.push(`Explanation: ${result.explanation}`);
-  if (result.risk) {
-    lines.push(`Risk: ${result.risk}`);
-  }
-  if (result.suggestion) {
-    lines.push(`Suggestion: ${result.suggestion}`);
-  }
-
-  const detail = lines.join("\n");
-
-  await vscode.window.showInformationMessage(
-    `🔮 Explain Next Step: ${shortStep}`,
-    { modal: true, detail },
-    "OK"
-  );
+  // No-op — results are rendered inline by DebugControlPanel.updateExplainResult().
 }
 
-/** No-op for API compatibility — modal dialogs don't need disposal. */
+/** No-op for API compatibility. */
 export function disposeExplainScorePanel(): void {
-  // nothing to dispose — modal is ephemeral
+  // nothing to dispose
 }
