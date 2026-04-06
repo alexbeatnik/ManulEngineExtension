@@ -2,7 +2,7 @@
   "name": "manul-engine",
   "displayName": "ManulEngine",
   "description": "Deterministic DSL & AI Self-Healing for Playwright. Features Hunt language support, visual StepBuilder, and local LLM integration via Ollama.",
-  "version": "0.0.926",
+  "version": "0.0.927",
   "publisher": "manul-engine",
   "icon": "images/icon128.png",
   "repository": {

@@ -2,7 +2,7 @@
 // Extension-local runtime contracts, parsers, and validators
 // ---------------------------------------------------------------------------
 
-export const MIN_MANUL_ENGINE_VERSION = '0.0.9.26'
+export const MIN_MANUL_ENGINE_VERSION = '0.0.9.27'
 
 export type StepStatus = 'pending' | 'running' | 'pass' | 'fail' | 'skipped'
 

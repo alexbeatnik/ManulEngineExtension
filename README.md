@@ -1,7 +1,7 @@
 # 😼 ManulEngine — VS Code Extension
 
 ![Alpha](https://img.shields.io/badge/status-alpha-bf5b04)
-![ManulEngine 0.0.9.26](https://img.shields.io/badge/manul--engine-0.0.9.26-1f6feb)
+![ManulEngine 0.0.9.27](https://img.shields.io/badge/manul--engine-0.0.9.27-1f6feb)
 ![Manul Product Line](https://img.shields.io/badge/product%20line-Manul-111827)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/manul-engine?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/manul-engine)
 [![PyPI](https://img.shields.io/pypi/v/manul-engine?label=PyPI&logo=pypi)](https://pypi.org/project/manul-engine/)
@@ -9,7 +9,7 @@
 
 The official VS Code extension for the **ManulEngine Deterministic Web & Desktop Automation Runtime**.
 
-The pinned ManulEngine runtime for this repository state is `0.0.9.26`. The VS Code extension manifest uses the compatible package version `0.0.926` because VS Code does not accept four-segment manifest versions.
+The pinned ManulEngine runtime for this repository state is `0.0.9.27`. The VS Code extension manifest uses the compatible package version `0.0.927` because VS Code does not accept four-segment manifest versions.
 
 Author, run, and debug `.hunt` automation scripts for E2E testing, RPA workflows, synthetic monitoring, and AI-agent execution — all from a single editor. The extension provides Hunt DSL language support, one-click execution, interactive debug stepping, a Step Builder sidebar, configuration UI, and cache management for [ManulEngine](https://github.com/alexbeatnik/ManulEngine).
 
@@ -168,7 +168,7 @@ Together, these form a layered debug workflow:
 
 - **ManulEngine** installed in the workspace or globally:
   ```bash
-  pip install manul-engine==0.0.9.26         # global / user
+  pip install manul-engine==0.0.9.27         # global / user
   # or in a project venv:
   pip install -e .
   ```
@@ -215,7 +215,7 @@ The extension probes the following locations in order (platform-aware):
 
 1. Install ManulEngine:
   ```bash
-  pip install manul-engine==0.0.9.26
+  pip install manul-engine==0.0.9.27
   playwright install chromium
   ```
 
@@ -318,6 +318,13 @@ The extension respects the runtime `workers` setting and the `manulEngine.worker
 - nested results still update live while multiple hunts are running in parallel
 
 ## Changelog
+
+### 0.0.9.27
+
+- bumped extension manifest to `0.0.927` and pinned ManulEngine runtime to `0.0.9.27`
+- replaced `Math.random()` nonces with `crypto.randomBytes` in all webview panels
+- fixed inline `require("child_process")` in `explainLensProvider` to top-level import
+- added `LIVE_SCAN_TIMEOUT_MS` kill timeout to explain runs to prevent indefinite hangs
 
 ### 0.0.9.26
 
