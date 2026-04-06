@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import * as fs from "fs";
+import { randomBytes } from "crypto";
 import { DEFAULT_CONFIG_FILENAME, getConfigFileName } from "./constants";
 
 // ── Default configuration values ─────────────────────────────────────────────
@@ -173,7 +174,7 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
   }
 
   private _getHtml(_webview: vscode.Webview): string {
-    const nonce = Math.random().toString(36).slice(2);
+    const nonce = randomBytes(16).toString("hex");
     return /* html */ `<!DOCTYPE html>
 <html lang="en">
 <head>
