@@ -13,7 +13,7 @@ The pinned ManulEngine runtime for this repository state is `0.0.9.26`. The VS C
 
 Author, run, and debug `.hunt` automation scripts for E2E testing, RPA workflows, synthetic monitoring, and AI-agent execution — all from a single editor. The extension provides Hunt DSL language support, one-click execution, interactive debug stepping, a Step Builder sidebar, configuration UI, and cache management for [ManulEngine](https://github.com/alexbeatnik/ManulEngine).
 
-ManulEngine is a Playwright-backed runtime that interprets plain-English `.hunt` DSL scripts deterministically — resolving DOM elements with blazing-fast JS heuristics (`DOMScorer` + `TreeWalker`), no CSS selectors, no cloud APIs. Automate browsers and desktop apps with the same DSL. Whether you are writing QA test suites, automating repetitive business tasks, or building production health monitors, the workflow is the same: write a `.hunt` file, hit Run.
+ManulEngine is a Playwright-backed runtime that interprets plain-English `.hunt` DSL scripts deterministically — resolving DOM elements with JavaScript heuristics (`DOMScorer` + `TreeWalker`), no CSS selectors, no cloud APIs. Automate browsers and desktop apps with the same DSL. Whether you are writing QA test suites, automating repetitive business tasks, or building production health monitors, the workflow is the same: write a `.hunt` file, hit Run.
 
 > The Manul goes hunting and never returns without its prey.
 
