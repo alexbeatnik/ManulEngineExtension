@@ -10,7 +10,7 @@ export function registerDoctorCommand(context: vscode.ExtensionContext) {
             location: vscode.ProgressLocation.Notification,
             title: "Manul Doctor: Running System Diagnostics",
             cancellable: false
-        }, async (progress) => {
+        }, async (_progress) => {
             let report = "<h2>🩺 Manul System Diagnostics Report</h2><ul>";
             
             try {

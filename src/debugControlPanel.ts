@@ -43,10 +43,7 @@ export class DebugControlPanel {
   private static _instance: DebugControlPanel | undefined;
   private _activeQp: vscode.QuickPick<vscode.QuickPickItem> | undefined;
 
-  private constructor(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    private readonly _ctx: vscode.ExtensionContext
-  ) {}
+  private constructor(_ctx: vscode.ExtensionContext) {}
 
   static getInstance(ctx: vscode.ExtensionContext): DebugControlPanel {
     if (!DebugControlPanel._instance) {

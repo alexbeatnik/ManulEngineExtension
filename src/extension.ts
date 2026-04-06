@@ -16,7 +16,7 @@ import {
   clearAllCacheCommand,
   clearSiteCacheCommand,
 } from "./cacheTreeProvider";
-import { DEFAULT_CONFIG_FILENAME, DEBUG_TERMINAL_NAME, TERMINAL_NAME, getConfigFileName } from "./constants";
+import { DEBUG_TERMINAL_NAME, TERMINAL_NAME, getConfigFileName } from "./constants";
 import { MANUL_DSL_COMMANDS, getManulDslContextSuggestions } from "./shared";
 import { HuntDocumentFormatter } from "./formatter";
 import { SchedulerPanel } from "./schedulerPanel";
@@ -47,7 +47,11 @@ export function activate(context: vscode.ExtensionContext): void {
       (t) => t.name === DEBUG_TERMINAL_NAME
     );
     vscode.commands.executeCommand("setContext", "manulDebugSessionActive", active);
-    active ? highlightItem.show() : highlightItem.hide();
+    if (active) {
+      highlightItem.show();
+    } else {
+      highlightItem.hide();
+    }
   }
 
   context.subscriptions.push(

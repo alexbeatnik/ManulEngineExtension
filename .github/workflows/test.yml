@@ -1,6 +1,7 @@
-name: CI
+name: Tests
 
 on:
+  pull_request:
   push:
     branches:
       - main
@@ -11,11 +12,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: tests-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-test-package:
+  test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -37,14 +38,3 @@ jobs:
 
       - name: Run tests
         run: npm test
-
-      - name: Package VSIX
-        run: npm exec -- vsce package
-
-      - name: Upload VSIX artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: manul-engine-vsix
-          path: manul-engine-*.vsix
-          if-no-files-found: error

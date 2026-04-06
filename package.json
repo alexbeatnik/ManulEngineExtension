@@ -346,7 +346,8 @@
     "build:extension": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "lint": "eslint src --ext ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -354,10 +355,14 @@
     "dependencies": false
   },
   "devDependencies": {
+    "@eslint/js": "^9.25.1",
     "@types/node": "^20.x",
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^3.7.1",
+    "eslint": "^9.25.1",
+    "globals": "^16.0.0",
     "typescript": "^5.3.x",
+    "typescript-eslint": "^8.30.1",
     "vitest": "^4.1.0"
   }
 }
