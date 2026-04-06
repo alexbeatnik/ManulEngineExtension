@@ -5,8 +5,8 @@
 import * as path from "path";
 import * as fs from "fs";
 import * as vscode from "vscode";
-import { DEFAULT_CONFIG_FILENAME, PAUSE_MARKER } from "./shared";
-export { DEFAULT_CONFIG_FILENAME, PAUSE_MARKER };
+import { DEFAULT_CONFIG_FILENAME, PAUSE_MARKER, EXPLAIN_NEXT_MARKER } from "./shared";
+export { DEFAULT_CONFIG_FILENAME, PAUSE_MARKER, EXPLAIN_NEXT_MARKER };
 export {
   RE_COMMENT,
   RE_DONE,

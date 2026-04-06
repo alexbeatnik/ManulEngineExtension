@@ -136,12 +136,14 @@ export function activate(context: vscode.ExtensionContext): void {
           },
           undefined,
           breakLines,
-          (step, idx) => {
+          (step, idx, sendExplainNext) => {
             explainParser.setCurrentStep(idx);
             return panel.showPause(step, idx, () => {
-              const data = explainParser.getExplanationForStep(idx);
-              showExplainScorePanel(data, step, idx);
+              sendExplainNext();
             });
+          },
+          (result) => {
+            showExplainScorePanel(result);
           }
         );
         debugOutputChannel.appendLine("\n✅ Debug run complete.");

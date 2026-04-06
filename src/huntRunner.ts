@@ -3,8 +3,8 @@ import * as fs from "fs";
 import * as os from "os";
 import { execFile, spawn, ChildProcess } from "child_process";
 import * as vscode from "vscode";
-import { PAUSE_MARKER, DEBUG_TERMINAL_NAME, PYTHON_ENV_FLAGS, getConfigFileName } from "./constants";
-import { MIN_MANUL_ENGINE_VERSION, parseVersion } from "./shared";
+import { PAUSE_MARKER, EXPLAIN_NEXT_MARKER, DEBUG_TERMINAL_NAME, PYTHON_ENV_FLAGS, getConfigFileName } from "./constants";
+import { MIN_MANUL_ENGINE_VERSION, parseVersion, ExplainNextResult } from "./shared";
 
 /**
  * Quote a single argument for safe use inside a terminal send-text command.
@@ -351,7 +351,8 @@ export function runHuntFileDebugPanel(
   onData: (chunk: string) => void,
   token?: vscode.CancellationToken,
   breakLines?: number[],
-  onPause?: (step: string, idx: number) => Promise<"next" | "continue" | "debug-stop" | "stop-test">
+  onPause?: (step: string, idx: number, sendExplainNext: () => void) => Promise<"next" | "continue" | "debug-stop" | "stop-test">,
+  onExplainNextResult?: (result: ExplainNextResult) => void
 ): Promise<number> {
   return new Promise((resolve, reject) => {
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(huntFile));
@@ -408,6 +409,18 @@ export function runHuntFileDebugPanel(
       const lines = stdoutBuf.split("\n");
       stdoutBuf = lines.pop() ?? "";
       for (const line of lines) {
+        // ── Explain-next result marker ───────────────────────────────────
+        const explainIdx = line.indexOf(EXPLAIN_NEXT_MARKER);
+        if (explainIdx !== -1) {
+          const jsonPart = line.substring(explainIdx + EXPLAIN_NEXT_MARKER.length);
+          try {
+            const result = JSON.parse(jsonPart) as ExplainNextResult;
+            onExplainNextResult?.(result);
+          } catch { /* ignore malformed JSON */ }
+          continue; // don't forward marker lines to onData
+        }
+
+        // ── Debug pause marker ───────────────────────────────────────────
         const markerIdx = line.indexOf(PAUSE_MARKER);
         if (markerIdx !== -1) {
           // Parse the JSON payload that follows the pause marker.
@@ -420,11 +433,20 @@ export function runHuntFileDebugPanel(
             idx = parsed.idx ?? 0;
           } catch { /* ignore malformed JSON — still respond so Python doesn't hang */ }
 
+          // Helper: send explain-next request to the engine without resolving
+          // the pause.  The engine will respond with EXPLAIN_NEXT_MARKER on
+          // stdout and then re-emit the pause marker.
+          const sendExplainNext = () => {
+            if (proc.exitCode === null && proc.stdin && !proc.stdin.destroyed) {
+              proc.stdin.write("explain-next\n");
+            }
+          };
+
           // Show the Webview panel (if onPause provided) or fall back to
           // a notification.  Either way write the response to stdin so the
           // blocked Python readline() unblocks.
           const pausePromise: Thenable<"next" | "continue" | "debug-stop" | "stop-test"> = onPause
-            ? onPause(step, idx)
+            ? onPause(step, idx, sendExplainNext)
             : (() => {
                 const shortStep = step.length > 100 ? step.substring(0, 100) + "…" : step;
                 return vscode.window

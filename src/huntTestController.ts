@@ -400,12 +400,14 @@ export function createHuntTestController(
           }
         };
         return runHuntFileDebugPanel(exe, file, wrappedOnData, tok, getHuntBreakpointLines(file),
-          (step, idx) => {
+          (step, idx, sendExplainNext) => {
             explainParser.setCurrentStep(idx);
             return panel.showPause(step, idx, () => {
-              const data = explainParser.getExplanationForStep(idx);
-              showExplainScorePanel(data, step, idx);
+              sendExplainNext();
             });
+          },
+          (result) => {
+            showExplainScorePanel(result);
           });
       };
 
