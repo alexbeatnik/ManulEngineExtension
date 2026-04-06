@@ -1,5 +1,5 @@
 import * as vscode from 'vscode'
-import { validateHuntDocument } from '@manul/shared'
+import { validateHuntDocument } from './shared'
 
 const HUNT_DIAGNOSTICS_COLLECTION = 'manul-hunt'
 

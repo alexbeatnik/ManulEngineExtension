@@ -10,7 +10,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import * as fs from "fs";
 import { spawn } from "child_process";
-import { MANUL_DSL_COMMANDS } from "@manul/shared";
+import { MANUL_DSL_COMMANDS } from "./shared";
 import { findManulExecutable } from "./huntRunner";
 import { getConfigFileName, TERMINAL_NAME } from "./constants";
 
@@ -30,7 +30,7 @@ const TEARDOWN_SCAFFOLD = `[TEARDOWN]
 
 const DEMO_TEST_FILENAMES = ["demoqa.hunt", "mega.hunt", "rahul.hunt", "saucedemo.hunt"] as const;
 
-// STEP_TEMPLATES removed — buttons are now generated from MANUL_DSL_COMMANDS in @manul/shared.
+// STEP_TEMPLATES removed — buttons are now generated from the extension-local MANUL_DSL_COMMANDS registry.
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
@@ -66,13 +66,13 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  private _getHtml(webview: vscode.Webview): string {
+  private _getHtml(_webview: vscode.Webview): string {
     // Generate a nonce for the CSP — required for inline scripts in VS Code webviews.
     const nonce = getNonce();
     const csp = `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';`;
 
     // Generate buttons from the shared DSL contract — single source of truth.
-    // Markup mirrors Studio's StepBuilder.tsx: icon span + label span + inline tooltip.
+    // Markup uses icon span + label span + inline tooltip.
     const buttons = MANUL_DSL_COMMANDS.map(
       (cmd) =>
         `<div class="sb-tooltip-wrap" data-cmd-id="${cmd.id}">
@@ -850,7 +850,7 @@ export async function newHuntFileCommand(
     prompt: "Hunt file name (without .hunt extension)",
     placeHolder: "my_test",
     validateInput: (v) =>
-      /^[\w\-]+$/.test(v.trim()) ? null : "Use letters, digits, - or _ only",
+      /^[\w-]+$/.test(v.trim()) ? null : "Use letters, digits, - or _ only",
   });
   if (!name) { return; }
 

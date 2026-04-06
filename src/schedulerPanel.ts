@@ -244,7 +244,7 @@ export class SchedulerPanel {
   private readonly _panel: vscode.WebviewPanel;
   private _disposed = false;
 
-  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+  private constructor(panel: vscode.WebviewPanel, _extensionUri: vscode.Uri) {
     this._panel = panel;
 
     // Handle messages from the webview
@@ -411,7 +411,7 @@ export class SchedulerPanel {
 
   // ── HTML template ────────────────────────────────────────────────────────
 
-  private _getHtml(webview: vscode.Webview): string {
+  private _getHtml(_webview: vscode.Webview): string {
     const nonce = getNonce();
     const csp = `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';`;
 

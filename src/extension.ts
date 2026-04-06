@@ -16,8 +16,8 @@ import {
   clearAllCacheCommand,
   clearSiteCacheCommand,
 } from "./cacheTreeProvider";
-import { DEFAULT_CONFIG_FILENAME, DEBUG_TERMINAL_NAME, TERMINAL_NAME, getConfigFileName } from "./constants";
-import { MANUL_DSL_COMMANDS, getManulDslContextSuggestions } from "@manul/shared";
+import { DEBUG_TERMINAL_NAME, TERMINAL_NAME, getConfigFileName } from "./constants";
+import { MANUL_DSL_COMMANDS, getManulDslContextSuggestions } from "./shared";
 import { HuntDocumentFormatter } from "./formatter";
 import { SchedulerPanel } from "./schedulerPanel";
 import { ExplainHoverProvider, ExplainOutputParser, clearExplanations } from "./explainHoverProvider";
@@ -47,7 +47,11 @@ export function activate(context: vscode.ExtensionContext): void {
       (t) => t.name === DEBUG_TERMINAL_NAME
     );
     vscode.commands.executeCommand("setContext", "manulDebugSessionActive", active);
-    active ? highlightItem.show() : highlightItem.hide();
+    if (active) {
+      highlightItem.show();
+    } else {
+      highlightItem.hide();
+    }
   }
 
   context.subscriptions.push(
@@ -284,7 +288,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   // ── .hunt DSL IntelliSense (autocompletion + snippets) ─────────────────────
-  // Maps MANUL_DSL_COMMANDS from @manul/shared into VS Code CompletionItems,
+  // Maps MANUL_DSL_COMMANDS from the extension-local shared module into VS Code CompletionItems,
   // plus hook blocks ([SETUP], [TEARDOWN]) and metadata directives (@context, etc.).
   context.subscriptions.push(
     vscode.languages.registerCompletionItemProvider(
@@ -360,7 +364,7 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 // ── DSL completion helper ──────────────────────────────────────────────────
-// Converts MANUL_DSL_COMMANDS from @manul/shared into VS Code CompletionItems
+// Converts MANUL_DSL_COMMANDS from the extension-local shared module into VS Code CompletionItems
 // with proper snippet tab-stops, documentation, and sorting order.
 
 function buildDslCompletionItems(linePrefix = ""): vscode.CompletionItem[] {

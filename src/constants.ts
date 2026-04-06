@@ -3,7 +3,7 @@
  */
 
 import * as vscode from "vscode";
-import { DEFAULT_CONFIG_FILENAME, PAUSE_MARKER } from "@manul/shared";
+import { DEFAULT_CONFIG_FILENAME, PAUSE_MARKER } from "./shared";
 export { DEFAULT_CONFIG_FILENAME, PAUSE_MARKER };
 export {
   RE_COMMENT,
@@ -12,7 +12,7 @@ export {
   RE_HOOK_OPEN,
   RE_METADATA,
   RE_STEP,
-} from "@manul/shared";
+} from "./shared";
 
 /** Terminal name for normal (non-debug) hunt runs. */
 export const TERMINAL_NAME = "ManulEngine";

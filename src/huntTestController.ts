@@ -4,7 +4,7 @@ import * as fs from "fs";
 import { parseEngineLogLine } from "./engineLogParser";
 import { findManulExecutable, runHunt, runHuntFileDebugPanel, getHuntBreakpointLines } from "./huntRunner";
 import { DebugControlPanel } from "./debugControlPanel";
-import { DEFAULT_CONFIG_FILENAME, TERMINAL_NAME, getConfigFileName } from "./constants";
+import { TERMINAL_NAME, getConfigFileName } from "./constants";
 import { ExplainOutputParser, clearExplanations } from "./explainHoverProvider";
 
 // ── Concurrency helpers ────────────────────────────────────────────────────

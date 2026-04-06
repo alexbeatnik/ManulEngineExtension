@@ -172,7 +172,7 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
     fs.writeFileSync(p, JSON.stringify(this._normalizeConfig(config), null, 2) + "\n", "utf-8");
   }
 
-  private _getHtml(webview: vscode.Webview): string {
+  private _getHtml(_webview: vscode.Webview): string {
     const nonce = Math.random().toString(36).slice(2);
     return /* html */ `<!DOCTYPE html>
 <html lang="en">
@@ -408,7 +408,7 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
         model: modelVal === '' ? null : modelVal,
         headless: g('headless').checked,
         browser: g('browser').value,
-        browser_args: g('browser_args').value.trim().split(/[,\s]+/).map(s => s.trim()).filter(Boolean),
+        browser_args: g('browser_args').value.trim().split(/[,\\s]+/).map(s => s.trim()).filter(Boolean),
           channel: g('channel').value.trim() || null,
         executable_path: g('executable_path').value.trim() || null,
         timeout: parseInt(g('timeout').value, 10) || 5000,
