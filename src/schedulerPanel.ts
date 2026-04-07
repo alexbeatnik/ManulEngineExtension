@@ -39,8 +39,10 @@ interface RunHistoryRecord {
 function isRunHistoryRecord(value: unknown): value is RunHistoryRecord {
   if (typeof value !== 'object' || value === null) { return false; }
   const r = value as Record<string, unknown>;
+  const hasUsableName = typeof r.name === 'string' && r.name.trim().length > 0;
+  const hasUsableFile = typeof r.file === 'string' && r.file.trim().length > 0;
   // At least one of name/file must be a non-empty string for the record to be usable.
-  return typeof r.name === 'string' || typeof r.file === 'string';
+  return hasUsableName || hasUsableFile;
 }
 
 // ── File scanner ─────────────────────────────────────────────────────────────

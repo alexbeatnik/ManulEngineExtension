@@ -567,7 +567,8 @@ export async function runHuntFileDebugInTerminal(
   const breakLines = getHuntBreakpointLines(uri.fsPath);
   const breakFlag = breakLines.length > 0 ? ` --break-lines ${breakLines.join(",")}` : "";
   const termBrowserFlags = getBrowserFlags();
-  const browserFlag = termBrowserFlags.args.length > 0 ? ` ${termBrowserFlags.args.join(" ")}` : "";
+  const quotedBrowserArgs = termBrowserFlags.args.map((arg) => quoteShellArg(arg, isPowerShell));
+  const browserFlag = quotedBrowserArgs.length > 0 ? ` ${quotedBrowserArgs.join(" ")}` : "";
   const command = isPowerShell
     ? `& ${quoteShellArg(manulExe, true)}${browserFlag} --debug${breakFlag} ${quoteShellArg(uri.fsPath, true)}`
     : `${quoteShellArg(manulExe, false)}${browserFlag} --debug${breakFlag} ${quoteShellArg(uri.fsPath, false)}`;
