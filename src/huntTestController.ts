@@ -408,7 +408,8 @@ export function createHuntTestController(
           },
           (result) => {
             panel.updateExplainResult(result);
-          });
+          },
+          () => { panel.abort(); });
       };
 
       try {

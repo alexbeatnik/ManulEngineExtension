@@ -144,7 +144,8 @@ export function activate(context: vscode.ExtensionContext): void {
           },
           (result) => {
             panel.updateExplainResult(result);
-          }
+          },
+          () => { panel.abort(); }
         );
         debugOutputChannel.appendLine("\n✅ Debug run complete.");
       } finally {
@@ -274,13 +275,14 @@ export function activate(context: vscode.ExtensionContext): void {
   // warns the user if the installed ManulEngine is below the minimum version.
   const _versionCheckRoot = (vscode.workspace.workspaceFolders ?? [])[0]?.uri.fsPath;
   if (_versionCheckRoot) {
-    findManulExecutable(_versionCheckRoot).then((manulExe) =>
-      checkManulEngineVersion(manulExe).then((warning) => {
+    findManulExecutable(_versionCheckRoot)
+      .then((manulExe) => checkManulEngineVersion(manulExe))
+      .then((warning) => {
         if (warning) {
           vscode.window.showWarningMessage(`ManulEngine: ${warning}`);
         }
       })
-    );
+      .catch(() => {});
   }
 
   // ── Hunt file formatter ────────────────────────────────────────────────────

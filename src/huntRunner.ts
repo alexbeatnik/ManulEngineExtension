@@ -45,7 +45,7 @@ export async function checkManulEngineVersion(manulExe: string): Promise<string 
         const b = mv[i] ?? 0;
         if (a < b) {
           resolve(
-            `v${installed} is installed but v${MIN_MANUL_ENGINE_VERSION} or newer is required. ` +
+            `v${installed} is installed but this extension requires exactly v${MIN_MANUL_ENGINE_VERSION}. ` +
             `Run: pip install --upgrade "manul-engine==${MIN_MANUL_ENGINE_VERSION}"`
           );
           return;
@@ -381,7 +381,8 @@ export function runHuntFileDebugPanel(
   token?: vscode.CancellationToken,
   breakLines?: number[],
   onPause?: (step: string, idx: number, sendExplainNext: (stepOverride?: string) => void) => Promise<"next" | "continue" | "debug-stop" | "stop-test">,
-  onExplainNextResult?: (result: ExplainNextResult) => void
+  onExplainNextResult?: (result: ExplainNextResult) => void,
+  onPauseTimeout?: () => void
 ): Promise<number> {
   return new Promise((resolve, reject) => {
     const { args, env, cwd } = buildSpawnConfig(huntFile, {
@@ -498,6 +499,7 @@ export function runHuntFileDebugPanel(
                   Promise.resolve(pausePromise).then((v) => { clearTimeout(_pauseTimer); return v; }),
                   new Promise<"continue">((res) => {
                     _pauseTimer = setTimeout(() => {
+                      onPauseTimeout?.();
                       vscode.window.setStatusBarMessage(
                         `⏱ ManulEngine: debug pause timed out — resuming.`, 5000
                       );

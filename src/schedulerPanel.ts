@@ -41,8 +41,14 @@ function isRunHistoryRecord(value: unknown): value is RunHistoryRecord {
   const r = value as Record<string, unknown>;
   const hasUsableName = typeof r.name === 'string' && r.name.trim().length > 0;
   const hasUsableFile = typeof r.file === 'string' && r.file.trim().length > 0;
-  // At least one of name/file must be a non-empty string for the record to be usable.
-  return hasUsableName || hasUsableFile;
+  const hasUsableStatus = typeof r.status === 'string' && r.status.trim().length > 0;
+  const hasUsableTimestamp =
+    typeof r.timestamp === 'string' &&
+    r.timestamp.trim().length > 0 &&
+    !Number.isNaN(Date.parse(r.timestamp));
+  const hasUsableDuration =
+    typeof r.duration_ms === 'number' && Number.isFinite(r.duration_ms);
+  return hasUsableName && hasUsableFile && hasUsableStatus && hasUsableTimestamp && hasUsableDuration;
 }
 
 // ── File scanner ─────────────────────────────────────────────────────────────
