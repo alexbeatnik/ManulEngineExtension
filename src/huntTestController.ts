@@ -402,8 +402,8 @@ export function createHuntTestController(
         return runHuntFileDebugPanel(exe, file, wrappedOnData, tok, getHuntBreakpointLines(file),
           (step, idx, sendExplainNext) => {
             explainParser.setCurrentStep(idx);
-            return panel.showPause(step, idx, () => {
-              sendExplainNext();
+            return panel.showPause(step, idx, file, (stepOverride) => {
+              sendExplainNext(stepOverride);
             });
           },
           (result) => {

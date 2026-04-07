@@ -138,8 +138,8 @@ export function activate(context: vscode.ExtensionContext): void {
           breakLines,
           (step, idx, sendExplainNext) => {
             explainParser.setCurrentStep(idx);
-            return panel.showPause(step, idx, () => {
-              sendExplainNext();
+            return panel.showPause(step, idx, target.fsPath, (stepOverride) => {
+              sendExplainNext(stepOverride);
             });
           },
           (result) => {

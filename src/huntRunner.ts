@@ -351,7 +351,7 @@ export function runHuntFileDebugPanel(
   onData: (chunk: string) => void,
   token?: vscode.CancellationToken,
   breakLines?: number[],
-  onPause?: (step: string, idx: number, sendExplainNext: () => void) => Promise<"next" | "continue" | "debug-stop" | "stop-test">,
+  onPause?: (step: string, idx: number, sendExplainNext: (stepOverride?: string) => void) => Promise<"next" | "continue" | "debug-stop" | "stop-test">,
   onExplainNextResult?: (result: ExplainNextResult) => void
 ): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -444,9 +444,13 @@ export function runHuntFileDebugPanel(
           // Helper: send explain-next request to the engine without resolving
           // the pause.  The engine will respond with EXPLAIN_NEXT_MARKER on
           // stdout and then re-emit the pause marker.
-          const sendExplainNext = () => {
+          const sendExplainNext = (stepOverride?: string) => {
             if (proc.exitCode === null && proc.stdin && !proc.stdin.destroyed) {
-              proc.stdin.write("explain-next\n");
+              if (stepOverride) {
+                proc.stdin.write(`explain-next ${JSON.stringify({ step: stepOverride })}\n`);
+              } else {
+                proc.stdin.write("explain-next\n");
+              }
             }
           };
 

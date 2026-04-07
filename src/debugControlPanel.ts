@@ -21,6 +21,41 @@ const EXPLAIN_LABEL = "🔮  Explain Next Step";
 const DSTOP_LABEL   = "⏹  Debug Stop";
 const SSTOP_LABEL   = "🛑  Stop Test";
 
+/**
+ * Find the 0-based line number of a step in the open editor document.
+ * Matches the trimmed step text against each line.  Returns -1 if not found.
+ */
+function findStepLine(huntFile: string, stepText: string): number {
+  const uri = vscode.Uri.file(huntFile);
+  const doc = vscode.workspace.textDocuments.find(
+    (d) => d.uri.fsPath === uri.fsPath
+  );
+  if (!doc) { return -1; }
+
+  const trimmed = stepText.trim();
+  for (let i = 0; i < doc.lineCount; i++) {
+    if (doc.lineAt(i).text.trim() === trimmed) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Read the current text of the step line from the VS Code editor.
+ * Uses a pre-computed 0-based line number so it works even after the user
+ * edits the line content between clicks.
+ */
+function readStepAtLine(huntFile: string, lineNumber: number): string | undefined {
+  if (lineNumber < 0) { return undefined; }
+  const uri = vscode.Uri.file(huntFile);
+  const doc = vscode.workspace.textDocuments.find(
+    (d) => d.uri.fsPath === uri.fsPath
+  );
+  if (!doc || lineNumber >= doc.lineCount) { return undefined; }
+  return doc.lineAt(lineNumber).text.trim() || undefined;
+}
+
 /** Best-effort: raise the editor window above other apps on Linux. */
 function tryRaiseWindow(stepIdx: number, stepText: string): void {
   if (process.platform !== "linux") { return; }
@@ -98,7 +133,8 @@ export class DebugControlPanel {
   showPause(
     step: string,
     idx: number,
-    onExplainRequest?: () => void
+    huntFile?: string,
+    onExplainRequest?: (stepOverride?: string) => void
   ): Promise<PauseChoice> {
     // Raise OS window and show system notification (fires async, best-effort).
     tryRaiseWindow(idx, step);
@@ -118,6 +154,10 @@ export class DebugControlPanel {
       ];
       qp.ignoreFocusOut = true;
 
+      // Locate the step's line number in the editor NOW (at pause time)
+      // so we can read the current text later even if the user edits it.
+      const stepLineNumber = huntFile ? findStepLine(huntFile, step) : -1;
+
       let resolved = false;
       const done = (choice: PauseChoice) => {
         if (resolved) { return; }
@@ -131,7 +171,10 @@ export class DebugControlPanel {
         const label = qp.selectedItems[0]?.label;
         if (label === EXPLAIN_LABEL) {
           qp.busy = true;
-          onExplainRequest?.();
+          // Read the CURRENT text at the step's line — picks up any user
+          // edits made since the engine paused.
+          const currentStep = huntFile ? readStepAtLine(huntFile, stepLineNumber) : undefined;
+          onExplainRequest?.(currentStep);
           // Clear selection so the same item can be clicked again.
           qp.activeItems = [];
           qp.value = "";
