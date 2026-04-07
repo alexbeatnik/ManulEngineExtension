@@ -103,7 +103,8 @@ export class DebugControlPanel {
 
     const found = result.target_found ? "✅" : "❌";
     const target = result.target_element || "(no match)";
-    const summary = `Score: ${result.score}/10 (${result.confidence_label}) ${found} ${target}`;
+    const formattedScore = result.score.toFixed(2);
+    const summary = `Score: ${formattedScore} (${result.confidence_label}) ${found} ${target}`;
 
     const parts: string[] = [];
     if (result.explanation) { parts.push(result.explanation); }

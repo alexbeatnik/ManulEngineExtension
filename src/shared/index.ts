@@ -26,6 +26,7 @@ export const EXPLAIN_NEXT_MARKER = '\x00MANUL_EXPLAIN_NEXT\x00'
 /** JSON payload from the engine's `explain-next` stdin token response. */
 export interface ExplainNextResult {
   step: string;
+  /** Normalized confidence score in the range [0.0, 1.0]. */
   score: number;
   confidence_label: string;
   target_found: boolean;
@@ -33,6 +34,7 @@ export interface ExplainNextResult {
   explanation: string;
   risk: string;
   suggestion: string | null;
+  /** Raw heuristic score in the range [0.0, 1.0], or null when unavailable. */
   heuristic_score: number | null;
   heuristic_match: string | null;
 }

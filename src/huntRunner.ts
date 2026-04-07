@@ -461,9 +461,7 @@ export function runHuntFileDebugPanel(
               const msg = stepOverride
                 ? `explain-next ${JSON.stringify({ step: stepOverride })}\n`
                 : "explain-next\n";
-              // M-4: respect backpressure — if write returns false, wait for drain.
-              const ok = proc.stdin.write(msg);
-              if (!ok) { proc.stdin.once("drain", () => {}); }
+              proc.stdin.write(msg);
             }
           };
 
@@ -520,16 +518,14 @@ export function runHuntFileDebugPanel(
               if (choice === "stop-test") {
                 // Send abort token so Python can clean up, then kill the process.
                 if (proc.exitCode === null && proc.stdin && !proc.stdin.destroyed) {
-                  const ok = proc.stdin.write("abort\n");
-                  if (!ok) { proc.stdin.once("drain", () => {}); }
+                  proc.stdin.write("abort\n");
                 }
                 setTimeout(() => { if (proc.exitCode === null) { proc.kill(); } }, 500);
               } else {
                 // For debug-stop, send the payload to Python so it clears all breakpoints.
                 const stdinPayload = choice === "debug-stop" ? "debug-stop" : choice;
                 if (proc.exitCode === null && proc.stdin && !proc.stdin.destroyed) {
-                  const ok = proc.stdin.write(stdinPayload + "\n");
-                  if (!ok) { proc.stdin.once("drain", () => {}); }
+                  proc.stdin.write(stdinPayload + "\n");
                 }
               }
             },
