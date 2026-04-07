@@ -1,7 +1,7 @@
 # 😼 ManulEngine — VS Code Extension
 
 ![Alpha](https://img.shields.io/badge/status-alpha-bf5b04)
-![ManulEngine 0.0.9.26](https://img.shields.io/badge/manul--engine-0.0.9.26-1f6feb)
+![ManulEngine 0.0.9.27](https://img.shields.io/badge/manul--engine-0.0.9.27-1f6feb)
 ![Manul Product Line](https://img.shields.io/badge/product%20line-Manul-111827)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/manul-engine?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/manul-engine)
 [![PyPI](https://img.shields.io/pypi/v/manul-engine?label=PyPI&logo=pypi)](https://pypi.org/project/manul-engine/)
@@ -9,7 +9,7 @@
 
 The official VS Code extension for the **ManulEngine Deterministic Web & Desktop Automation Runtime**.
 
-The pinned ManulEngine runtime for this repository state is `0.0.9.26`. The VS Code extension manifest uses the compatible package version `0.0.926` because VS Code does not accept four-segment manifest versions.
+The pinned ManulEngine runtime for this repository state is `0.0.9.27`. The VS Code extension manifest uses the compatible package version `0.0.927` because VS Code does not accept four-segment manifest versions.
 
 Author, run, and debug `.hunt` automation scripts for E2E testing, RPA workflows, synthetic monitoring, and AI-agent execution — all from a single editor. The extension provides Hunt DSL language support, one-click execution, interactive debug stepping, a Step Builder sidebar, configuration UI, and cache management for [ManulEngine](https://github.com/alexbeatnik/ManulEngine).
 
@@ -62,8 +62,9 @@ Place breakpoints by clicking the editor gutter next to any step number in a `.h
 - Execution pauses at each breakpointed step with a floating **QuickPick overlay** — no modal dialogs, no Cancel button
 - **⏭ Next Step** — advance exactly one step and pause again
 - **▶ Continue All** — run until the next gutter breakpoint or end of hunt
+- **🔮 Explain Next Step** — request the live heuristic explanation for the paused step and show the result inline in the same QuickPick without stealing focus
 - **Stop button** — clicking Stop in Test Explorer dismisses the QuickPick and terminates the run cleanly; Python never hangs
-- **👁 Highlight Element** — a third QuickPick option that re-scrolls the browser to the persistently highlighted target element and re-shows the pause overlay without advancing the step
+- If you edit the paused step line in the editor and trigger **Explain Next Step** again, the extension sends the current line text to the engine instead of stale cached text
 - **Linux:** VS Code window is raised via `xdotool`/`wmctrl` and a 5-second system notification appears via `notify-send` when execution pauses
 - **Persistent magenta highlight** — the resolved target element is outlined with a `4px solid #ff00ff` border + glow while execution is paused; the highlight is removed automatically just before the action executes
 - Debug output streams live into the **ManulEngine Debug** output channel
@@ -168,7 +169,7 @@ Together, these form a layered debug workflow:
 
 - **ManulEngine** installed in the workspace or globally:
   ```bash
-  pip install manul-engine==0.0.9.26         # global / user
+  pip install manul-engine==0.0.9.27         # global / user
   # or in a project venv:
   pip install -e .
   ```
@@ -208,6 +209,12 @@ The extension probes the following locations in order (platform-aware):
 | `manulEngine.htmlReport` | `false` | Generate a self-contained HTML report after each run (saved to `reports/manul_report.html`). |
 | `manulEngine.retries` | `0` | Number of times to retry a failed hunt file before marking it as failed (0–10). |
 | `manulEngine.screenshotMode` | `"on-fail"` | Screenshot capture mode: `none`, `on-fail` (failed steps only), `always` (every step). |
+| `manulEngine.testsHome` | `"tests"` | Directory where Step Builder creates new hunt files. Overrides `tests_home` from the runtime config. |
+| `manulEngine.autoAnnotate` | `false` | Sets `MANUL_AUTO_ANNOTATE=true` for runs so navigation comments are added by the runtime when enabled. |
+| `manulEngine.explainMode` | `false` | Always enable detailed heuristic explain output during runs. |
+| `manulEngine.verifyMaxRetries` | `null` | Override the runtime polling retry count for `VERIFY` steps. |
+| `manulEngine.debugPauseTimeoutSeconds` | `300` | Auto-resume an unattended debug pause after N seconds. `0` disables the timeout. |
+| `manulEngine.browser` | `"chromium"` | Browser engine override for hunt execution. Supports `chromium`, `firefox`, `webkit`, `chrome`, `msedge`, and `electron`. |
 
 ---
 
@@ -215,7 +222,7 @@ The extension probes the following locations in order (platform-aware):
 
 1. Install ManulEngine:
   ```bash
-  pip install manul-engine==0.0.9.26
+  pip install manul-engine==0.0.9.27
   playwright install chromium
   ```
 
@@ -318,6 +325,19 @@ The extension respects the runtime `workers` setting and the `manulEngine.worker
 - nested results still update live while multiple hunts are running in parallel
 
 ## Changelog
+
+### 0.0.9.27
+
+- bumped extension manifest to `0.0.927` and pinned ManulEngine runtime to `0.0.9.27`
+- replaced `Math.random()` nonces with `crypto.randomBytes` in all webview panels
+- fixed inline `require("child_process")` in `explainLensProvider` to top-level import
+- added `LIVE_SCAN_TIMEOUT_MS` kill timeout to explain runs to prevent indefinite hangs
+- moved explain-next results into the floating debug QuickPick and removed the modal score panel flow
+- explain-next now rereads the current paused step line from the editor, so inline edits are reflected on the next explain request
+- centralized hunt process spawn argument/env construction and removed duplicate `--explain` injection
+- added TTL-based eviction for cached login-shell `manul` lookups and kept shell-based auto-detection per workspace
+- hardened debug stdio handling with oversized stdout/JSON guards, pause-timeout cleanup, and safer stdin writes during backpressure
+- normalized config writes through a strict allowlist so unknown keys are not persisted back to `manul_engine_configuration.json`
 
 ### 0.0.9.26
 

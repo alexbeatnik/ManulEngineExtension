@@ -11,14 +11,50 @@
  */
 import * as vscode from "vscode";
 import { exec, execFile } from "child_process";
+import type { ExplainNextResult } from "./shared";
 
-export type PauseChoice = "next" | "continue" | "highlight" | "debug-stop" | "stop-test";
+export type PauseChoice = "next" | "continue" | "debug-stop" | "stop-test";
 
-const NEXT_LABEL  = "⏭  Next Step";
-const CONT_LABEL  = "▶  Continue All";
-const HIGH_LABEL  = "👁  Highlight Element";
-const DSTOP_LABEL = "⏹  Debug Stop";
-const SSTOP_LABEL = "🛑  Stop Test";
+const NEXT_LABEL    = "⏭  Next Step";
+const CONT_LABEL    = "▶  Continue All";
+const EXPLAIN_LABEL = "🔮  Explain Next Step";
+const DSTOP_LABEL   = "⏹  Debug Stop";
+const SSTOP_LABEL   = "🛑  Stop Test";
+
+/**
+ * Find the 0-based line number of a step in the open editor document.
+ * Matches the trimmed step text against each line.  Returns -1 if not found.
+ */
+function findStepLine(huntFile: string, stepText: string): number {
+  const uri = vscode.Uri.file(huntFile);
+  const doc = vscode.workspace.textDocuments.find(
+    (d) => d.uri.fsPath === uri.fsPath
+  );
+  if (!doc) { return -1; }
+
+  const trimmed = stepText.trim();
+  for (let i = 0; i < doc.lineCount; i++) {
+    if (doc.lineAt(i).text.trim() === trimmed) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Read the current text of the step line from the VS Code editor.
+ * Uses a pre-computed 0-based line number so it works even after the user
+ * edits the line content between clicks.
+ */
+function readStepAtLine(huntFile: string, lineNumber: number): string | undefined {
+  if (lineNumber < 0) { return undefined; }
+  const uri = vscode.Uri.file(huntFile);
+  const doc = vscode.workspace.textDocuments.find(
+    (d) => d.uri.fsPath === uri.fsPath
+  );
+  if (!doc || lineNumber >= doc.lineCount) { return undefined; }
+  return doc.lineAt(lineNumber).text.trim() || undefined;
+}
 
 /** Best-effort: raise the editor window above other apps on Linux. */
 function tryRaiseWindow(stepIdx: number, stepText: string): void {
@@ -55,11 +91,52 @@ export class DebugControlPanel {
   // ── Public API ─────────────────────────────────────────────────────────────
 
   /**
+   * Update the active QuickPick with explain-next results from the engine.
+   * Called by the onExplainNextResult callback when the engine responds.
+   * The result is shown inline — no modal, no hide/show cycle.
+   */
+  updateExplainResult(result: ExplainNextResult): void {
+    const qp = this._activeQp;
+    if (!qp) { return; }
+
+    qp.busy = false;
+
+    const found = result.target_found ? "✅" : "❌";
+    const target = result.target_element || "(no match)";
+    const formattedScore = result.score.toFixed(2);
+    const summary = `Score: ${formattedScore} (${result.confidence_label}) ${found} ${target}`;
+
+    const parts: string[] = [];
+    if (result.explanation) { parts.push(result.explanation); }
+    if (result.risk) { parts.push(`Risk: ${result.risk}`); }
+    if (result.suggestion) { parts.push(`Suggestion: ${result.suggestion}`); }
+    if (result.heuristic_score !== null && result.heuristic_score !== undefined) {
+      parts.push(`Heuristic: ${result.heuristic_score}`);
+    }
+    if (result.heuristic_match) { parts.push(`Match: ${result.heuristic_match}`); }
+    const detail = parts.join(" · ");
+
+    // Rebuild items to update the Explain entry's description & detail.
+    qp.items = [
+      { label: NEXT_LABEL },
+      { label: CONT_LABEL },
+      { label: EXPLAIN_LABEL, description: summary, detail },
+      { label: DSTOP_LABEL, description: "Skip all remaining breakpoints and run to end" },
+      { label: SSTOP_LABEL, description: "Abort the test immediately" },
+    ];
+  }
+
+  /**
    * Show a floating QuickPick overlay for the current debug step.
    * ignoreFocusOut=true keeps it visible even when the browser is active.
    * Calling abort() (e.g. from Stop button) hides it immediately.
    */
-  showPause(step: string, idx: number): Promise<PauseChoice> {
+  showPause(
+    step: string,
+    idx: number,
+    huntFile?: string,
+    onExplainRequest?: (stepOverride?: string) => void
+  ): Promise<PauseChoice> {
     // Raise OS window and show system notification (fires async, best-effort).
     tryRaiseWindow(idx, step);
 
@@ -72,11 +149,15 @@ export class DebugControlPanel {
       qp.items = [
         { label: NEXT_LABEL },
         { label: CONT_LABEL },
-        { label: HIGH_LABEL,  description: "Scroll the browser to the highlighted element" },
+        { label: EXPLAIN_LABEL, description: "Show heuristic score breakdown for this step" },
         { label: DSTOP_LABEL, description: "Skip all remaining breakpoints and run to end" },
         { label: SSTOP_LABEL, description: "Abort the test immediately" },
       ];
       qp.ignoreFocusOut = true;
+
+      // Locate the step's line number in the editor NOW (at pause time)
+      // so we can read the current text later even if the user edits it.
+      const stepLineNumber = huntFile ? findStepLine(huntFile, step) : -1;
 
       let resolved = false;
       const done = (choice: PauseChoice) => {
@@ -89,8 +170,16 @@ export class DebugControlPanel {
 
       qp.onDidAccept(() => {
         const label = qp.selectedItems[0]?.label;
-        if (label === HIGH_LABEL) {
-          done("highlight");
+        if (label === EXPLAIN_LABEL) {
+          qp.busy = true;
+          // Read the CURRENT text at the step's line — picks up any user
+          // edits made since the engine paused.
+          const currentStep = huntFile ? readStepAtLine(huntFile, stepLineNumber) : undefined;
+          onExplainRequest?.(currentStep);
+          // Clear selection so the same item can be clicked again.
+          qp.activeItems = [];
+          qp.value = "";
+          return;
         } else if (label === DSTOP_LABEL) {
           done("debug-stop");
         } else if (label === SSTOP_LABEL) {

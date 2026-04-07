@@ -3,7 +3,59 @@ import * as fs from "fs";
 import * as os from "os";
 import { execFile, spawn, ChildProcess } from "child_process";
 import * as vscode from "vscode";
-import { PAUSE_MARKER, DEBUG_TERMINAL_NAME, PYTHON_ENV_FLAGS, getConfigFileName } from "./constants";
+import { PAUSE_MARKER, EXPLAIN_NEXT_MARKER, DEBUG_TERMINAL_NAME, PYTHON_ENV_FLAGS, getConfigFileName } from "./constants";
+import { MIN_MANUL_ENGINE_VERSION, parseVersion, ExplainNextResult } from "./shared";
+
+/**
+ * Quote a single argument for safe use inside a terminal send-text command.
+ *
+ * Uses single-quoting so spaces and most shell metacharacters are treated
+ * literally by the target shell.  Embedded single quotes are escaped with
+ * the conventional shell idiom so no metacharacter can break out of the
+ * quoted string.
+ *
+ * @param arg    – the argument to quote (e.g. a file path or executable path)
+ * @param psMode – true when the target shell is PowerShell / pwsh
+ */
+function quoteShellArg(arg: string, psMode: boolean): string {
+  if (psMode) {
+    // PowerShell single-quoted strings: double up embedded single quotes.
+    return "'" + arg.replace(/'/g, "''") + "'";
+  }
+  // POSIX (bash / zsh / fish / sh): use '\'' to embed a literal single quote.
+  return "'" + arg.replace(/'/g, "'\\''" ) + "'";
+}
+
+/**
+ * Run `manulExe --version`, parse the reported version, and compare it
+ * against MIN_MANUL_ENGINE_VERSION.  Returns a user-facing warning string
+ * when the installed version is too old; undefined when the version is
+ * acceptable or cannot be determined (e.g. old engine without --version).
+ */
+export async function checkManulEngineVersion(manulExe: string): Promise<string | undefined> {
+  return new Promise<string | undefined>((resolve) => {
+    execFile(manulExe, ['--version'], { timeout: 5000 }, (_err, stdout) => {
+      const match = stdout.trim().match(/(\d+(?:\.\d+)+)/);
+      if (!match) { resolve(undefined); return; }
+      const installed = match[1];
+      const iv = parseVersion(installed);
+      const mv = parseVersion(MIN_MANUL_ENGINE_VERSION);
+      for (let i = 0; i < Math.max(iv.length, mv.length); i++) {
+        const a = iv[i] ?? 0;
+        const b = mv[i] ?? 0;
+        if (a < b) {
+          resolve(
+            `v${installed} is installed but this extension requires exactly v${MIN_MANUL_ENGINE_VERSION}. ` +
+            `Run: pip install --upgrade "manul-engine==${MIN_MANUL_ENGINE_VERSION}"`
+          );
+          return;
+        }
+        if (a > b) { break; }
+      }
+      resolve(undefined);
+    });
+  });
+}
 
 /**
  * Read the manulEngine.browser setting and return the CLI flags needed.
@@ -65,7 +117,10 @@ function readExecutablePath(workspaceRoot: string): string | undefined {
 
 // Per-workspace cache of in-flight/resolved promises — concurrent calls for the
 // same workspaceRoot share one lookup rather than each spawning a shell.
-const _shellCache = new Map<string, Promise<string>>();
+// Each entry also stores a timestamp for TTL-based eviction.
+const _shellCache = new Map<string, { promise: Promise<string>; ts: number }>();
+/** Cache TTL in milliseconds (5 minutes). */
+const _SHELL_CACHE_TTL_MS = 5 * 60 * 1000;
 
 export async function findManulExecutable(workspaceRoot: string): Promise<string> {
   const custom = vscode.workspace
@@ -146,9 +201,12 @@ export async function findManulExecutable(workspaceRoot: string): Promise<string
 
   // Return the cached promise if a lookup is already in-flight or completed for
   // this workspace — prevents concurrent calls from each spawning a shell.
-  if (_shellCache.has(workspaceRoot)) {
-    return _shellCache.get(workspaceRoot)!;
+  // Evict stale entries after TTL so a deleted venv is re-probed.
+  const cached = _shellCache.get(workspaceRoot);
+  if (cached && (Date.now() - cached.ts < _SHELL_CACHE_TTL_MS)) {
+    return cached.promise;
   }
+  _shellCache.delete(workspaceRoot);
 
   // Async login-shell lookup — sources the user's real shell init so that
   // conda/pyenv/asdf/direnv shims are visible. Uses execFile with an explicit
@@ -198,14 +256,78 @@ export async function findManulExecutable(workspaceRoot: string): Promise<string
   // If the lookup fell back to the plain "manul" string (shell init failed or timed
   // out), evict the cache so the next call retries rather than permanently locking
   // in the failure for the rest of the extension-host session.
-  const cached = promise.then((result) => {
+  const entry = promise.then((result) => {
     if (result === "manul") {
       _shellCache.delete(workspaceRoot);
     }
     return result;
   });
-  _shellCache.set(workspaceRoot, cached);
-  return cached;
+  _shellCache.set(workspaceRoot, { promise: entry, ts: Date.now() });
+  return entry;
+}
+
+/**
+ * Build the CLI args and env for spawning ManulEngine.
+ *
+ * Centralises the duplicated logic that was previously scattered across
+ * `runHunt()` and `runHuntFileDebugPanel()`.
+ *
+ * @param forceExplain – always inject `--explain` regardless of the user
+ *   setting (used by the debug-panel code path so heuristic scoring data
+ *   is available for the HoverProvider).
+ */
+interface SpawnConfigOptions {
+  breakLines?: number[];
+  forceExplain?: boolean;
+}
+
+function buildSpawnConfig(
+  huntFile: string,
+  opts: SpawnConfigOptions = {}
+): { args: string[]; env: Record<string, string>; cwd: string } {
+  const workspaceFolder = vscode.workspace.getWorkspaceFolder(
+    vscode.Uri.file(huntFile)
+  );
+  const cwd = workspaceFolder?.uri.fsPath ?? path.dirname(huntFile);
+
+  const browserFlags = getBrowserFlags();
+  const args = [...browserFlags.args, "--workers", "1"];
+
+  if (opts.breakLines && opts.breakLines.length > 0) {
+    args.push("--break-lines", opts.breakLines.join(","));
+  }
+
+  const cfg = vscode.workspace.getConfiguration("manulEngine");
+  const retries = cfg.get<number>("retries", 0);
+  if (retries > 0) { args.push("--retries", String(retries)); }
+
+  const screenshot = cfg.get<string>("screenshotMode", "on-fail");
+  if (screenshot && screenshot !== "on-fail") { args.push("--screenshot", screenshot); }
+
+  if (cfg.get<boolean>("htmlReport", false)) { args.push("--html-report"); }
+
+  // Add --explain once: either forced (debug panel) or via setting—never both.
+  if (opts.forceExplain || cfg.get<boolean>("explainMode", false)) {
+    args.push("--explain");
+  }
+
+  const verifyMaxRetries = cfg.get<number | null>("verifyMaxRetries", null);
+
+  args.push(huntFile);
+
+  const autoAnnotate = cfg.get<boolean>("autoAnnotate", false);
+  const execPath = readExecutablePath(cwd);
+
+  const env: Record<string, string> = {
+    ...(process.env as Record<string, string>),
+    ...PYTHON_ENV_FLAGS,
+    ...browserFlags.env,
+    ...(autoAnnotate ? { MANUL_AUTO_ANNOTATE: "true" } : {}),
+    ...(verifyMaxRetries !== null ? { MANUL_VERIFY_MAX_RETRIES: String(verifyMaxRetries) } : {}),
+    ...(execPath ? { MANUL_EXECUTABLE_PATH: execPath } : {}),
+  };
+
+  return { args, env, cwd };
 }
 
 /** Spawn manul <huntFile> and stream output. Resolves with exit code. */
@@ -217,52 +339,11 @@ export function runHunt(
   breakLines?: number[]
 ): Promise<number> {
   return new Promise((resolve, reject) => {
-    // Prefer the workspace folder root as cwd so ManulEngine picks up
-    // manul_engine_configuration.json and cache paths from the project root.
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(
-      vscode.Uri.file(huntFile)
-    );
-    const cwd = workspaceFolder?.uri.fsPath ?? path.dirname(huntFile);
+    const { args, env, cwd } = buildSpawnConfig(huntFile, { breakLines });
 
     let proc: ChildProcess;
     try {
-      // --workers 1 forces sequential mode so each Test Explorer invocation
-      // runs directly in-process (no subprocess spawning overhead / recursion).
-      const browserFlags = getBrowserFlags();
-      const spawnArgs = [...browserFlags.args, "--workers", "1"];
-      if (breakLines && breakLines.length > 0) {
-        spawnArgs.push("--break-lines", breakLines.join(","));
-      }
-
-      // ── Reporting & retry flags from VS Code settings ──────────────────────
-      const _cfg = vscode.workspace.getConfiguration("manulEngine");
-      const _retries = _cfg.get<number>("retries", 0);
-      if (_retries > 0) { spawnArgs.push("--retries", String(_retries)); }
-      const _screenshot = _cfg.get<string>("screenshotMode", "on-fail");
-      if (_screenshot && _screenshot !== "on-fail") { spawnArgs.push("--screenshot", _screenshot); }
-      if (_cfg.get<boolean>("htmlReport", false)) { spawnArgs.push("--html-report"); }
-        if (_cfg.get<boolean>("explainMode", false)) { spawnArgs.push("--explain"); }
-        const _verifyMaxRetries = _cfg.get<number | null>("verifyMaxRetries", null);
-
-      spawnArgs.push(huntFile);
-      // Only inject MANUL_AUTO_ANNOTATE when it is explicitly ON in VS Code settings.
-      // When the setting is false/unset, do NOT inject the env var — this lets the
-      // project's manul_engine_configuration.json auto_annotate value take effect.
-      const _autoAnnotate = _cfg.get<boolean>("autoAnnotate", false);
-      const _execPath = readExecutablePath(cwd);
-      proc = spawn(manulExe, spawnArgs, {
-        cwd,
-        env: {
-          ...process.env,
-          // Force Python to flush stdout immediately — without this, output
-          // is block-buffered when piped and steps appear only at the end.
-          ...PYTHON_ENV_FLAGS,
-          ...browserFlags.env,
-          ...(_autoAnnotate ? { MANUL_AUTO_ANNOTATE: "true" } : {}),
-            ...(_verifyMaxRetries !== null ? { MANUL_VERIFY_MAX_RETRIES: String(_verifyMaxRetries) } : {}),
-          ...(_execPath ? { MANUL_EXECUTABLE_PATH: _execPath } : {}),
-        },
-      });
+      proc = spawn(manulExe, args, { cwd, env });
     } catch (err) {
       reject(err);
       return;
@@ -299,49 +380,22 @@ export function runHuntFileDebugPanel(
   onData: (chunk: string) => void,
   token?: vscode.CancellationToken,
   breakLines?: number[],
-  onPause?: (step: string, idx: number) => Promise<"next" | "continue" | "highlight" | "debug-stop" | "stop-test">
+  onPause?: (step: string, idx: number, sendExplainNext: (stepOverride?: string) => void) => Promise<"next" | "continue" | "debug-stop" | "stop-test">,
+  onExplainNextResult?: (result: ExplainNextResult) => void,
+  onPauseTimeout?: () => void
 ): Promise<number> {
   return new Promise((resolve, reject) => {
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(huntFile));
-    const cwd = workspaceFolder?.uri.fsPath ?? path.dirname(huntFile);
-
-    // No --debug flag here: we only want to pause at explicit breakpoints
-    // (--break-lines).  Adding --debug would pause before every step.
-    // Always inject --explain so heuristic scoring data is available for
-    // the HoverProvider (tooltip on hover over step lines).
-    const browserFlagsPanel = getBrowserFlags();
-    const spawnArgs = [...browserFlagsPanel.args, "--explain", "--workers", "1"];
-    if (breakLines && breakLines.length > 0) {
-      spawnArgs.push("--break-lines", breakLines.join(","));
-    }
-
-    // ── Reporting & retry flags from VS Code settings ──────────────────────
-    const _cfgPanel = vscode.workspace.getConfiguration("manulEngine");
-    const _retriesPanel = _cfgPanel.get<number>("retries", 0);
-    if (_retriesPanel > 0) { spawnArgs.push("--retries", String(_retriesPanel)); }
-    const _screenshotPanel = _cfgPanel.get<string>("screenshotMode", "on-fail");
-    if (_screenshotPanel && _screenshotPanel !== "on-fail") { spawnArgs.push("--screenshot", _screenshotPanel); }
-    if (_cfgPanel.get<boolean>("htmlReport", false)) { spawnArgs.push("--html-report"); }
-    if (_cfgPanel.get<boolean>("explainMode", false)) { spawnArgs.push("--explain"); }
-    const _verifyMaxRetriesPanel = _cfgPanel.get<number | null>("verifyMaxRetries", null);
-
-    spawnArgs.push(huntFile);
+    const { args, env, cwd } = buildSpawnConfig(huntFile, {
+      breakLines,
+      forceExplain: true,
+    });
 
     let proc: ChildProcess;
     try {
-      const _autoAnnotatePanel = _cfgPanel.get<boolean>("autoAnnotate", false);
-      const _execPathPanel = readExecutablePath(cwd);
-      proc = spawn(manulExe, spawnArgs, {
+      proc = spawn(manulExe, args, {
         cwd,
         stdio: ["pipe", "pipe", "pipe"],
-        env: {
-          ...process.env,
-          ...PYTHON_ENV_FLAGS,
-          ...browserFlagsPanel.env,
-          ...(_autoAnnotatePanel ? { MANUL_AUTO_ANNOTATE: "true" } : {}),
-            ...(_verifyMaxRetriesPanel !== null ? { MANUL_VERIFY_MAX_RETRIES: String(_verifyMaxRetriesPanel) } : {}),
-          ...(_execPathPanel ? { MANUL_EXECUTABLE_PATH: _execPathPanel } : {}),
-        },
+        env,
       });
     } catch (err) {
       reject(err);
@@ -351,28 +405,72 @@ export function runHuntFileDebugPanel(
     // Line-buffer stdout so we can detect pause markers reliably even if data
     // arrives in chunks smaller than a full line.
     let stdoutBuf = "";
+    /** Safety cap: discard the buffer if a single line exceeds 1 MB (H-1). */
+    const MAX_LINE_LEN = 1_048_576;
+    /** Max JSON payload size we will parse (512 KB) (H-2). */
+    const MAX_JSON_LEN = 524_288;
+    // Track whether we're currently inside a pause (waiting for user action).
+    // The engine re-emits the PAUSE_MARKER after non-breaking tokens like
+    // explain-next — we must ignore re-emitted markers while a pause is active.
+    let pauseActive = false;
     proc.stdout?.on("data", (d: Buffer) => {
       stdoutBuf += d.toString();
+      if (stdoutBuf.length > MAX_LINE_LEN) {
+        console.warn("[ManulEngine] stdoutBuf exceeded 1 MB — discarding partial line");
+        stdoutBuf = "";
+        return;
+      }
       const lines = stdoutBuf.split("\n");
       stdoutBuf = lines.pop() ?? "";
       for (const line of lines) {
+        // ── Explain-next result marker ───────────────────────────────────
+        const explainIdx = line.indexOf(EXPLAIN_NEXT_MARKER);
+        if (explainIdx !== -1) {
+          const jsonPart = line.substring(explainIdx + EXPLAIN_NEXT_MARKER.length);
+          if (jsonPart.length > MAX_JSON_LEN) { continue; } // H-2: skip oversized payloads
+          try {
+            const result = JSON.parse(jsonPart) as ExplainNextResult;
+            onExplainNextResult?.(result);
+          } catch { /* ignore malformed JSON */ }
+          continue; // don't forward marker lines to onData
+        }
+
+        // ── Debug pause marker ───────────────────────────────────────────
         const markerIdx = line.indexOf(PAUSE_MARKER);
         if (markerIdx !== -1) {
+          // The engine re-emits the pause marker after non-breaking tokens
+          // (explain-next, highlight, explain).  Ignore the re-emit.
+          if (pauseActive) { continue; }
+          pauseActive = true;
           // Parse the JSON payload that follows the pause marker.
           const jsonPart = line.substring(markerIdx + PAUSE_MARKER.length);
           let step = "";
           let idx = 0;
-          try {
-            const parsed = JSON.parse(jsonPart) as { step?: string; idx?: number };
-            step = parsed.step ?? "";
-            idx = parsed.idx ?? 0;
-          } catch { /* ignore malformed JSON — still respond so Python doesn't hang */ }
+          if (jsonPart.length <= MAX_JSON_LEN) { // H-2: skip oversized payloads
+            try {
+              const parsed = JSON.parse(jsonPart) as { step?: string; idx?: number };
+              step = parsed.step ?? "";
+              idx = parsed.idx ?? 0;
+            } catch { /* ignore malformed JSON — still respond so Python doesn't hang */ }
+          }
+
+          // Helper: send explain-next request to the engine without resolving
+          // the pause.  The engine will respond with EXPLAIN_NEXT_MARKER on
+          // stdout and then re-emit the pause marker.
+          const sendExplainNext = (stepOverride?: string) => {
+            if (proc.exitCode === null && proc.stdin && !proc.stdin.destroyed) {
+              const msg = stepOverride
+                ? `explain-next ${JSON.stringify({ step: stepOverride })}\n`
+                : "explain-next\n";
+              proc.stdin.write(msg);
+            }
+          };
 
           // Show the Webview panel (if onPause provided) or fall back to
           // a notification.  Either way write the response to stdin so the
           // blocked Python readline() unblocks.
-          const pausePromise: Thenable<"next" | "continue" | "highlight" | "debug-stop" | "stop-test"> = onPause
-            ? onPause(step, idx)
+          const pausePromise: Thenable<"next" | "continue" | "debug-stop" | "stop-test"> = onPause
+            ? onPause(step, idx, sendExplainNext)
             : (() => {
                 const shortStep = step.length > 100 ? step.substring(0, 100) + "…" : step;
                 return vscode.window
@@ -386,8 +484,36 @@ export function runHuntFileDebugPanel(
                     choice === "▶ Continue All" ? "continue" : "next"
                   );
               })();
-          pausePromise.then(
-            (choice: "next" | "continue" | "highlight" | "debug-stop" | "stop-test") => {
+          // Race the pause promise against an idle timeout so the Python process
+          // is never blocked indefinitely when the user walks away or the UI freezes.
+          const _pauseTimeoutSec = Math.max(
+            0,
+            vscode.workspace.getConfiguration("manulEngine").get<number>("debugPauseTimeoutSeconds", 300)
+          );
+          // H-4: store timeout handle so we can clear it when the pause resolves,
+          // preventing the timer callback from firing after the promise settles.
+          let _pauseTimer: ReturnType<typeof setTimeout> | undefined;
+          const _timedPause: Promise<"next" | "continue" | "debug-stop" | "stop-test"> =
+            _pauseTimeoutSec > 0
+              ? Promise.race([
+                  Promise.resolve(pausePromise).then((v) => { clearTimeout(_pauseTimer); return v; }),
+                  new Promise<"continue">((res) => {
+                    _pauseTimer = setTimeout(() => {
+                      onPauseTimeout?.();
+                      vscode.window.setStatusBarMessage(
+                        `⏱ ManulEngine: debug pause timed out — resuming.`, 5000
+                      );
+                      res("continue");
+                    }, _pauseTimeoutSec * 1000);
+                  }),
+                ])
+              : Promise.resolve(pausePromise);
+          _timedPause.then(
+            (choice: "next" | "continue" | "debug-stop" | "stop-test") => {
+              // The pause is resolved — the next PAUSE_MARKER we see will
+              // be for a genuinely new step, not a re-emit after explain-next.
+              pauseActive = false;
+
               // Guard against writing to stdin after the process has already
               // exited or the stream has been closed/destroyed (e.g. user
               // pressed Stop while the QuickPick was open).
@@ -443,10 +569,11 @@ export async function runHuntFileDebugInTerminal(
   const breakLines = getHuntBreakpointLines(uri.fsPath);
   const breakFlag = breakLines.length > 0 ? ` --break-lines ${breakLines.join(",")}` : "";
   const termBrowserFlags = getBrowserFlags();
-  const browserFlag = termBrowserFlags.args.length > 0 ? ` ${termBrowserFlags.args.join(" ")}` : "";
+  const quotedBrowserArgs = termBrowserFlags.args.map((arg) => quoteShellArg(arg, isPowerShell));
+  const browserFlag = quotedBrowserArgs.length > 0 ? ` ${quotedBrowserArgs.join(" ")}` : "";
   const command = isPowerShell
-    ? `& "${manulExe}"${browserFlag} --debug${breakFlag} "${uri.fsPath}"`
-    : `"${manulExe}"${browserFlag} --debug${breakFlag} "${uri.fsPath}"`;
+    ? `& ${quoteShellArg(manulExe, true)}${browserFlag} --debug${breakFlag} ${quoteShellArg(uri.fsPath, true)}`
+    : `${quoteShellArg(manulExe, false)}${browserFlag} --debug${breakFlag} ${quoteShellArg(uri.fsPath, false)}`;
   const terminal = vscode.window.createTerminal({
     name: DEBUG_TERMINAL_NAME,
     cwd: workspaceRoot,

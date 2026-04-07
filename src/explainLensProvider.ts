@@ -9,8 +9,9 @@
 
 import * as vscode from "vscode";
 import * as path from "path";
+import { spawn } from "child_process";
 import { findManulExecutable } from "./huntRunner";
-import { EXPLAIN_OUTPUT_CHANNEL, PYTHON_ENV_FLAGS } from "./constants";
+import { EXPLAIN_OUTPUT_CHANNEL, LIVE_SCAN_TIMEOUT_MS, PYTHON_ENV_FLAGS } from "./constants";
 
 // ── Step-line detection ────────────────────────────────────────────────────
 // Matches lines that trigger element resolution (heuristic scoring).
@@ -124,9 +125,6 @@ function runExplain(
   huntFile: string,
   onData: (chunk: string) => void
 ): Promise<number> {
-  // We import spawn here to keep the module self-contained vs huntRunner.
-  const { spawn } = require("child_process") as typeof import("child_process");
-
   return new Promise((resolve, reject) => {
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(
       vscode.Uri.file(huntFile)
@@ -163,10 +161,15 @@ function runExplain(
       }
       const proc = spawn(manulExe, spawnArgs, { cwd, env });
 
+      const timer = setTimeout(() => {
+        proc.kill();
+        resolve(1);
+      }, LIVE_SCAN_TIMEOUT_MS);
+
       proc.stdout?.on("data", (d: Buffer) => onData(d.toString()));
       proc.stderr?.on("data", (d: Buffer) => onData(d.toString()));
-      proc.on("close", (code) => resolve(code ?? 1));
-      proc.on("error", reject);
+      proc.on("close", (code) => { clearTimeout(timer); resolve(code ?? 1); });
+      proc.on("error", (err) => { clearTimeout(timer); reject(err); });
     } catch (err) {
       reject(err);
     }

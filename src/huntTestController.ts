@@ -6,6 +6,7 @@ import { findManulExecutable, runHunt, runHuntFileDebugPanel, getHuntBreakpointL
 import { DebugControlPanel } from "./debugControlPanel";
 import { TERMINAL_NAME, getConfigFileName } from "./constants";
 import { ExplainOutputParser, clearExplanations } from "./explainHoverProvider";
+import { disposeExplainScorePanel } from "./explainScorePanel";
 
 // ── Concurrency helpers ────────────────────────────────────────────────────
 
@@ -399,10 +400,16 @@ export function createHuntTestController(
           }
         };
         return runHuntFileDebugPanel(exe, file, wrappedOnData, tok, getHuntBreakpointLines(file),
-          (step, idx) => {
+          (step, idx, sendExplainNext) => {
             explainParser.setCurrentStep(idx);
-            return panel.showPause(step, idx);
-          });
+            return panel.showPause(step, idx, file, (stepOverride) => {
+              sendExplainNext(stepOverride);
+            });
+          },
+          (result) => {
+            panel.updateExplainResult(result);
+          },
+          () => { panel.abort(); });
       };
 
       try {
@@ -413,6 +420,7 @@ export function createHuntTestController(
       } finally {
         abortDisposable.dispose();
         panel.dispose();
+        disposeExplainScorePanel();
         run.end();
         toRun.forEach((item) => item.children.replace([]));
       }

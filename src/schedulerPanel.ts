@@ -13,6 +13,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import * as fs from "fs";
+import { randomBytes } from "crypto";
 import { findManulExecutable } from "./huntRunner";
 import { DAEMON_TERMINAL_NAME, getConfigFileName } from "./constants";
 
@@ -33,6 +34,21 @@ interface RunHistoryRecord {
   timestamp: string;
   status: string;
   duration_ms: number;
+}
+
+function isRunHistoryRecord(value: unknown): value is RunHistoryRecord {
+  if (typeof value !== 'object' || value === null) { return false; }
+  const r = value as Record<string, unknown>;
+  const hasUsableName = typeof r.name === 'string' && r.name.trim().length > 0;
+  const hasUsableFile = typeof r.file === 'string' && r.file.trim().length > 0;
+  const hasUsableStatus = typeof r.status === 'string' && r.status.trim().length > 0;
+  const hasUsableTimestamp =
+    typeof r.timestamp === 'string' &&
+    r.timestamp.trim().length > 0 &&
+    !Number.isNaN(Date.parse(r.timestamp));
+  const hasUsableDuration =
+    typeof r.duration_ms === 'number' && Number.isFinite(r.duration_ms);
+  return hasUsableName && hasUsableFile && hasUsableStatus && hasUsableTimestamp && hasUsableDuration;
 }
 
 // ── File scanner ─────────────────────────────────────────────────────────────
@@ -131,8 +147,9 @@ function readRunHistory(
 
     for (const line of lines) {
       try {
-        const rec: RunHistoryRecord = JSON.parse(line);
-        if (!rec.name && !rec.file) { continue; }
+        const parsed: unknown = JSON.parse(line);
+        if (!isRunHistoryRecord(parsed)) { continue; }
+        const rec = parsed;
         // Key by relative file path when available (avoids basename collisions)
         if (rec.file) {
           const relFile = path.isAbsolute(rec.file)
@@ -835,10 +852,5 @@ export class SchedulerPanel {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function getNonce(): string {
-  let text = "";
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  for (let i = 0; i < 32; i++) {
-    text += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return text;
+  return randomBytes(16).toString("hex");
 }

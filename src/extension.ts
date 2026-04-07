@@ -6,7 +6,7 @@ import {
   runHuntFileViaController,
   runHuntFileInTerminalCommand,
 } from "./huntTestController";
-import { findManulExecutable, runHuntFileDebugPanel, getHuntBreakpointLines } from "./huntRunner";
+import { findManulExecutable, runHuntFileDebugPanel, getHuntBreakpointLines, checkManulEngineVersion } from "./huntRunner";
 import { DebugControlPanel } from "./debugControlPanel";
 import { ConfigPanelProvider, generateConfigCommand } from "./configPanel";
 import { StepBuilderProvider, newHuntFileCommand, insertSetupCommand, insertTeardownCommand, generateDemoTestCommand, insertInlinePythonCallCommand } from "./stepBuilderPanel";
@@ -23,6 +23,7 @@ import { SchedulerPanel } from "./schedulerPanel";
 import { ExplainHoverProvider, ExplainOutputParser, clearExplanations } from "./explainHoverProvider";
 import { registerHuntDiagnostics } from "./huntDiagnostics";
 import { registerDoctorCommand } from "./manulDoctor";
+import { disposeExplainScorePanel } from "./explainScorePanel";
 
 export function activate(context: vscode.ExtensionContext): void {
   registerDoctorCommand(context);
@@ -135,14 +136,21 @@ export function activate(context: vscode.ExtensionContext): void {
           },
           undefined,
           breakLines,
-          (step, idx) => {
+          (step, idx, sendExplainNext) => {
             explainParser.setCurrentStep(idx);
-            return panel.showPause(step, idx);
-          }
+            return panel.showPause(step, idx, target.fsPath, (stepOverride) => {
+              sendExplainNext(stepOverride);
+            });
+          },
+          (result) => {
+            panel.updateExplainResult(result);
+          },
+          () => { panel.abort(); }
         );
         debugOutputChannel.appendLine("\n✅ Debug run complete.");
       } finally {
         panel.dispose();
+        disposeExplainScorePanel();
       }
     }),
 
@@ -261,6 +269,21 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   context.subscriptions.push(configWatcher);
   configWatcher.onDidChange(() => cacheProvider.refresh());
+
+  // ── Engine version check (fire-and-forget at startup) ──────────────────────
+  // Resolves the executable path once to avoid a duplicate shell probe, then
+  // warns the user if the installed ManulEngine is below the minimum version.
+  const _versionCheckRoot = (vscode.workspace.workspaceFolders ?? [])[0]?.uri.fsPath;
+  if (_versionCheckRoot) {
+    findManulExecutable(_versionCheckRoot)
+      .then((manulExe) => checkManulEngineVersion(manulExe))
+      .then((warning) => {
+        if (warning) {
+          vscode.window.showWarningMessage(`ManulEngine: ${warning}`);
+        }
+      })
+      .catch(() => {});
+  }
 
   // ── Hunt file formatter ────────────────────────────────────────────────────
   context.subscriptions.push(

@@ -65,6 +65,7 @@ export function buildStepLineMap(filePath: string): Map<number, number> {
  * Persists across hover calls; cleared when a new debug session starts for
  * the same file.
  */
+const MAX_CACHED_FILES = 50;
 const _cache = new Map<string, Map<number, string>>();
 
 /** Clear cached explanations for a specific file. */
@@ -81,6 +82,11 @@ export function clearAllExplanations(): void {
 export function setExplanation(fileUri: string, line: number, text: string): void {
   let fileMap = _cache.get(fileUri);
   if (!fileMap) {
+    // Evict the oldest entry when the cache is full to prevent unbounded growth.
+    if (_cache.size >= MAX_CACHED_FILES) {
+      const oldest = _cache.keys().next().value;
+      if (oldest !== undefined) { _cache.delete(oldest); }
+    }
     fileMap = new Map();
     _cache.set(fileUri, fileMap);
   }
@@ -142,6 +148,13 @@ export class ExplainOutputParser {
       this._actionStepCounter = Math.max(this._actionStepCounter, stepNumber - 1);
       this._awaitingExplicitActionStart = true;
     }
+  }
+
+  /** Return cached explanation markdown for a given 1-based step number, or undefined. */
+  getExplanationForStep(stepNumber: number): string | undefined {
+    const line = this._stepLineMap.get(stepNumber);
+    if (line === undefined) { return undefined; }
+    return getExplanation(this._fileUri, line);
   }
 
   /** Feed a single stdout line (without trailing newline). */

@@ -9,6 +9,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import * as fs from "fs";
+import { randomBytes } from "crypto";
 import { spawn } from "child_process";
 import { MANUL_DSL_COMMANDS } from "./shared";
 import { findManulExecutable } from "./huntRunner";
@@ -599,14 +600,9 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Generate a random nonce string for the webview Content-Security-Policy. */
+/** Generate a cryptographically random nonce string for the webview Content-Security-Policy. */
 function getNonce(): string {
-  let text = "";
-  const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
+  return randomBytes(16).toString("hex");
 }
 
 /** Escape HTML special characters for safe insertion into webview markup. */

@@ -7,7 +7,7 @@ Follow these rules exactly:
 3. Execute ManulEngine with real child processes only. Use child_process.spawn, keep stdout and stderr streaming, and forward real log lines to VS Code surfaces.
 4. Never simulate execution, fake terminal output, stub engine responses, or inject mock logs during a run. The extension UI must reflect the real ManulEngine process state.
 5. Preserve unbuffered engine output. When spawning the Python CLI, keep PYTHONUNBUFFERED=1 so logs stream live.
-6. Enforce strict version pinning for this repository state. Use ManulEngine 0.0.9.26 exactly when writing installation commands, and keep shared version guards synchronized with that runtime pin unless explicitly changed by the user.
+6. Enforce strict version pinning for this repository state. Use ManulEngine 0.0.9.27 exactly when writing installation commands, and keep shared version guards synchronized with that runtime pin unless explicitly changed by the user.
 7. Do not hardcode a different ManulEngine version in scripts, docs, CI steps, lockfile expectations, or packaging logic.
 8. Treat .hunt files as first-class assets. Preserve editor, scanner, test explorer, formatter, hover/debugger, and future run-visualization flows around .hunt discovery and execution.
 9. Use the existing TypeScript types and naming conventions. Prefer extending current interfaces over inventing parallel shapes.

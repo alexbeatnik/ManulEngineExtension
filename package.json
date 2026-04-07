@@ -2,7 +2,7 @@
   "name": "manul-engine",
   "displayName": "ManulEngine",
   "description": "Deterministic DSL & AI Self-Healing for Playwright. Features Hunt language support, visual StepBuilder, and local LLM integration via Ollama.",
-  "version": "0.0.926",
+  "version": "0.0.927",
   "publisher": "manul-engine",
   "icon": "images/icon128.png",
   "repository": {
@@ -289,6 +289,12 @@
           "minimum": 0,
           "maximum": 10,
           "description": "Number of times to retry a failed hunt file. Tests that pass on retry are marked as flaky."
+        },
+        "manulEngine.debugPauseTimeoutSeconds": {
+          "type": "number",
+          "default": 300,
+          "minimum": 0,
+          "description": "Seconds before an unacknowledged debug-pause is automatically resumed with 'Continue'. Set to 0 to disable the timeout and wait indefinitely."
         },
         "manulEngine.screenshotMode": {
           "type": "string",

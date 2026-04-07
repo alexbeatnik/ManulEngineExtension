@@ -2,9 +2,11 @@
  * Shared constants used across the ManulEngine VS Code extension.
  */
 
+import * as path from "path";
+import * as fs from "fs";
 import * as vscode from "vscode";
-import { DEFAULT_CONFIG_FILENAME, PAUSE_MARKER } from "./shared";
-export { DEFAULT_CONFIG_FILENAME, PAUSE_MARKER };
+import { DEFAULT_CONFIG_FILENAME, PAUSE_MARKER, EXPLAIN_NEXT_MARKER } from "./shared";
+export { DEFAULT_CONFIG_FILENAME, PAUSE_MARKER, EXPLAIN_NEXT_MARKER };
 export {
   RE_COMMENT,
   RE_DONE,
@@ -44,8 +46,6 @@ export const LIVE_SCAN_TIMEOUT_MS = 90_000;
  * missing / has the wrong type.
  */
 export function readConfigField<T>(workspaceRoot: string, key: string, defaultValue: T): T {
-  const path = require("path");
-  const fs = require("fs");
   try {
     const cfgPath = path.join(workspaceRoot, getConfigFileName());
     const raw = JSON.parse(fs.readFileSync(cfgPath, "utf-8")) as Record<string, unknown>;

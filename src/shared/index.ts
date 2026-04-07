@@ -2,7 +2,7 @@
 // Extension-local runtime contracts, parsers, and validators
 // ---------------------------------------------------------------------------
 
-export const MIN_MANUL_ENGINE_VERSION = '0.0.9.26'
+export const MIN_MANUL_ENGINE_VERSION = '0.0.9.27'
 
 export type StepStatus = 'pending' | 'running' | 'pass' | 'fail' | 'skipped'
 
@@ -21,6 +21,23 @@ export type RunStatus = 'running' | 'success' | 'error' | 'cancelled'
 
 export const DEFAULT_CONFIG_FILENAME = 'manul_engine_configuration.json'
 export const PAUSE_MARKER = '\x00MANUL_DEBUG_PAUSE\x00'
+export const EXPLAIN_NEXT_MARKER = '\x00MANUL_EXPLAIN_NEXT\x00'
+
+/** JSON payload from the engine's `explain-next` stdin token response. */
+export interface ExplainNextResult {
+  step: string;
+  /** Normalized confidence score in the range [0.0, 1.0]. */
+  score: number;
+  confidence_label: string;
+  target_found: boolean;
+  target_element: string | null;
+  explanation: string;
+  risk: string;
+  suggestion: string | null;
+  /** Raw heuristic score in the range [0.0, 1.0], or null when unavailable. */
+  heuristic_score: number | null;
+  heuristic_match: string | null;
+}
 export const STEP_LINE_RE = /(?:\[[^\]]*\s*)?(STEP\s+\d+)(?:\s*[:@][^\]]*\])?\s*[:\s]\s*(.+)/i
 export const FAIL_LINE_RE = /❌|FAIL(?:ED)?|ERROR/i
 export const BLOCK_LOG_RE = /^\s*\[(?:[^\]]*\s+)?BLOCK\s+(START|PASS|FAIL)\]\s+(.+?)\s*$/i
