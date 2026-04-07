@@ -139,18 +139,22 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
   }
 
   private _normalizeConfig(config: Record<string, unknown>): Record<string, unknown> {
-    const { custom_modules_dirs: legacyCustomModulesDirs, ...configWithoutLegacyKey } = config;
+    const { custom_modules_dirs: legacyCustomModulesDirs } = config;
     const customControlsDirs = Array.isArray(config.custom_controls_dirs)
       ? config.custom_controls_dirs
       : Array.isArray(legacyCustomModulesDirs)
         ? legacyCustomModulesDirs
         : DEFAULT_CONFIG.custom_controls_dirs;
 
-    return {
-      ...DEFAULT_CONFIG,
-      ...configWithoutLegacyKey,
-      custom_controls_dirs: customControlsDirs,
-    };
+    // H-3: strict allowlist — only copy keys that exist in DEFAULT_CONFIG.
+    // Unknown / injected keys are silently dropped.
+    const allowedKeys = Object.keys(DEFAULT_CONFIG) as (keyof typeof DEFAULT_CONFIG)[];
+    const result: Record<string, unknown> = {};
+    for (const key of allowedKeys) {
+      result[key] = key in config ? config[key] : DEFAULT_CONFIG[key];
+    }
+    result.custom_controls_dirs = customControlsDirs;
+    return result;
   }
 
   private _readConfig(): Record<string, unknown> {
