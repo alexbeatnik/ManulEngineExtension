@@ -31,9 +31,7 @@
   "main": "./out/extension.js",
   "files": [
     "out/**",
-    "demo-tests/**",
     "images/**",
-    "prompts/**",
     "syntaxes/**",
     "language-configuration.json",
     "README.md",
@@ -128,20 +126,12 @@
         "title": "ManulEngine: Insert [TEARDOWN] Block"
       },
       {
-        "command": "manul.generateDemoTest",
-        "title": "ManulEngine: Add Demo Tests"
-      },
-      {
         "command": "manul.insertInlinePythonCall",
         "title": "ManulEngine: Insert Inline CALL PYTHON Step"
       },
       {
         "command": "manul.generateConfig",
         "title": "ManulEngine: Generate Default Config"
-      },
-      {
-        "command": "manul.addDefaultPrompts",
-        "title": "ManulEngine: Add Default Prompts"
       },
       {
         "command": "manul.clearAllCache",

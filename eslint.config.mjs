@@ -11,7 +11,6 @@ export default tseslint.config(
       'reports/**',
       'pages.json',
       'contracts/**',
-      'demo-tests/**',
       'packages/**',
     ],
   },

@@ -93,7 +93,7 @@ An interactive sidebar for editing `manul_engine_configuration.json` without tou
 | **Auto-Annotate** | Inserts `# 📍 Auto-Nav:` comments on URL changes during runs. |
 | **Workers** | Max concurrent hunt files in Test Explorer (1–4). |
 
-Changes save to `manul_engine_configuration.json` at the workspace root. A *Generate Default Config* button creates the file if absent. An *Add Default Prompts* button copies built-in prompt templates into `prompts/`. Ollama status indicator shows live reachability at `localhost:11434` with model autocomplete.
+Changes save to `manul_engine_configuration.json` at the workspace root. A *Generate Default Config* button creates the file if absent. Ollama status indicator shows live reachability at `localhost:11434` with model autocomplete.
 
 ### Cache browser
 
@@ -113,7 +113,7 @@ A sidebar panel for inserting hunt steps with a single click — no typing requi
 - **Step buttons** — generated from the shared DSL registry, covering the full runtime command set: `OPEN APP`, explicit waits, strict `VERIFY` checks, `VERIFY SOFTLY`, `VERIFY VISUAL`, `WAIT FOR RESPONSE`, `MOCK`, `SCAN PAGE`, `CALL PYTHON`, `SET`, `DEBUG VARS`, and the rest of the core verbs
 - **Contextual builder** — compose `NEAR`, `ON HEADER`, `ON FOOTER`, and `INSIDE '<container>' row with '<text>'` qualifiers without typing DSL by hand
 - **Proximity Builder** — interactive form for contextual Click / Fill / Verify steps with qualifier picker, target/anchor inputs, and live DSL preview before inserting
-- **Hooks buttons** — insert pre-filled `[SETUP]` / `[TEARDOWN]` blocks; **Add Demo Tests** copies bundled demo hunts into the workspace
+- **Hooks buttons** — insert pre-filled `[SETUP]` / `[TEARDOWN]` blocks
 - Each click appends to the active `.hunt` file and positions the cursor inside the first `''` pair
 
 ### Hunt DSL autocomplete

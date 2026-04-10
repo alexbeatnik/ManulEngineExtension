@@ -9,7 +9,7 @@ import {
 import { findManulExecutable, runHuntFileDebugPanel, getHuntBreakpointLines, checkManulEngineVersion } from "./huntRunner";
 import { DebugControlPanel } from "./debugControlPanel";
 import { ConfigPanelProvider, generateConfigCommand } from "./configPanel";
-import { StepBuilderProvider, newHuntFileCommand, insertSetupCommand, insertTeardownCommand, generateDemoTestCommand, insertInlinePythonCallCommand } from "./stepBuilderPanel";
+import { StepBuilderProvider, newHuntFileCommand, insertSetupCommand, insertTeardownCommand, insertInlinePythonCallCommand } from "./stepBuilderPanel";
 import {
   CacheTreeProvider,
   CacheItem,
@@ -171,10 +171,6 @@ export function activate(context: vscode.ExtensionContext): void {
       insertTeardownCommand()
     ),
 
-    vscode.commands.registerCommand("manul.generateDemoTest", () =>
-      generateDemoTestCommand(context)
-    ),
-
     vscode.commands.registerCommand("manul.insertInlinePythonCall", () =>
       insertInlinePythonCallCommand()
     ),
@@ -182,43 +178,6 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("manul.generateConfig", () =>
       generateConfigCommand()
     ),
-
-    vscode.commands.registerCommand("manul.addDefaultPrompts", () => {
-      const folders = vscode.workspace.workspaceFolders;
-      if (!folders || folders.length === 0) {
-        vscode.window.showWarningMessage("No workspace folder open.");
-        return;
-      }
-      const workspaceRoot = folders[0].uri.fsPath;
-      const destDir = path.join(workspaceRoot, "prompts");
-      if (fs.existsSync(destDir)) {
-        vscode.window.showWarningMessage(
-          "ManulEngine: prompts/ folder already exists in workspace."
-        );
-        return;
-      }
-      const srcDir = path.join(context.extensionPath, "prompts");
-      if (!fs.existsSync(srcDir)) {
-        vscode.window.showErrorMessage(
-          "ManulEngine: bundled prompts/ folder is missing from the extension package."
-        );
-        return;
-      }
-      try {
-        fs.mkdirSync(destDir, { recursive: true });
-        for (const file of fs.readdirSync(srcDir)) {
-          fs.copyFileSync(path.join(srcDir, file), path.join(destDir, file));
-        }
-        vscode.window.showInformationMessage(
-          "ManulEngine: default prompts added to prompts/ folder."
-        );
-      } catch (err) {
-        console.error("ManulEngine: failed to add default prompts.", err);
-        vscode.window.showErrorMessage(
-          "ManulEngine: failed to add default prompts. Check workspace permissions and try again."
-        );
-      }
-    }),
 
     vscode.commands.registerCommand("manul.debugHighlight", () => {
       // Prefer the dedicated debug terminal; fall back to "ManulEngine"
