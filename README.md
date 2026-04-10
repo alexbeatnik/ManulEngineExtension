@@ -10,269 +10,250 @@
 [![MCP Server](https://img.shields.io/visual-studio-marketplace/v/manul-engine.manul-mcp-server?label=MCP%20Server&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-mcp-server)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-d97706)](#status)
 
-Author, run, and debug `.hunt` automation scripts inside VS Code — E2E testing, RPA, synthetic monitoring, and AI-agent execution from a single editor. Language support, one-click execution, interactive debug stepping, Step Builder, configuration UI, and cache management for [ManulEngine](https://github.com/alexbeatnik/ManulEngine).
+Write browser automation in plain English. Run it, debug it, and understand every decision the engine makes — all without leaving VS Code.
 
-> **Status: Alpha.** Solo-developed, actively battle-tested. The extension and runtime are feature-rich but still being hardened on real-world projects. No promises about stability. The goal is strong debugging ergonomics and transparent execution, not inflated claims.
-
----
-
-## Dual-persona workflow
-
-ManulEngine bridges non-technical authors and engineering teams. You don't write selectors — you write scripts.
-
-- **QA / Business Analysts / Ops:** Write automation in plain English — no Python, CSS, or XPath. The deterministic heuristics engine resolves elements reliably across UI changes. The same scripts work for testing, RPA, and monitoring.
-- **Developers / SDETs:** No more maintaining thousands of brittle `page.locator()` calls. For complex custom widgets, write a Python control hook with the full Playwright API. The rest of the team keeps writing plain English — your hook handles the Playwright logic behind the scenes.
+> **Alpha.** Solo-developed and actively battle-tested. Feature-rich, not yet hardened across every edge case. The goal is transparent execution and strong debugging ergonomics, not inflated claims.
 
 ---
 
-## Features
+## What you get
 
-### Hunt file language support
-
-- Syntax highlighting for `.hunt` files
-- Comment toggling (`#`)
-- Bracket/quote matching and auto-closing
-- File icon in the explorer
-
-### Run hunt files
-
-Three ways to execute a `.hunt` file:
-
-| Method | How |
-|--------|-----|
-| **Editor title button** | Click the `▶` icon in the top-right when a `.hunt` file is open |
-| **Explorer context menu** | Right-click a `.hunt` file → *ManulEngine: Run Hunt File* |
-| **Terminal mode** | Right-click → *ManulEngine: Run Hunt File in Terminal* (raw integrated terminal) |
-
-Output streams live into a dedicated **ManulEngine** output channel.
-
-### Debug mode
-
-Place breakpoints by clicking the editor gutter next to any step number. Then run the **Debug** profile in Test Explorer (or use `ManulEngine: Debug Hunt File` from the Command Palette).
-
-- Execution pauses at each breakpointed step with a floating **QuickPick overlay** — no modal dialogs
-- **Next Step** — advance exactly one step and pause again
-- **Continue All** — run until the next gutter breakpoint or end of hunt
-- **Explain Next Step** — request the live heuristic explanation for the paused step, shown inline in the same QuickPick without stealing focus
-- **Stop** in Test Explorer dismisses the QuickPick and terminates the run cleanly; Python never hangs
-- Editing the paused step line and triggering **Explain Next Step** again sends the current editor text to the engine instead of stale cached text
-- **Persistent magenta highlight** — the resolved target element is outlined with a `4px solid #ff00ff` border + glow while paused; removed automatically before the action executes
-- **Linux:** VS Code window is raised via `xdotool`/`wmctrl` and a 5-second system notification via `notify-send` on pause
-- Uses `--break-lines` protocol (piped stdio): Python emits a marker on stdout; the extension responds on stdin
-
-### Test Explorer integration
-
-Hunt files appear in the **VS Code Test Explorer** as top-level items (one per file). Two run profiles:
-
-- **Run** (default) — normal execution via the output panel
-- **Debug** — gutter breakpoints with the floating QuickPick pause overlay
-
-For both profiles:
-
-- Each block/step is shown as a child item with pass/fail status
-- Failed steps display the engine output as the failure message
-- Steps never reached are marked as skipped
-- Child items are created from the engine's live hierarchical stdout — block start events create nested children during the run, pass/fail events update those items in place. Test Explorer reflects the real runtime timeline, not a reconstructed summary.
-
-### Configuration panel
-
-An interactive sidebar for editing `manul_engine_configuration.json` without touching the file directly.
-
-| Setting | Description |
-|---------|-------------|
-| **Model** | Ollama model name. Leave blank for heuristics-only mode (recommended default). |
-| **AI Policy** | `prior` or `strict` — only relevant when a model is set. |
-| **AI Threshold** | Score cutoff before optional LLM fallback. `null` = auto. |
-| **AI Always** | Always call the LLM picker. Disabled when no model is set. |
-| **Browser** | Chromium, Firefox, or WebKit. |
-| **Browser Args** | Extra launch flags (comma-separated). |
-| **Headless** | Run browser headless. |
-| **Timeouts** | Action and navigation timeouts in ms. |
-| **Controls Cache** | Persistent per-site cache storing resolved locators on disk across runs. |
-| **Semantic Cache** | In-session cache granting a 1.0 perfect score on reuse. Resets when the process ends. |
-| **Auto-Annotate** | Inserts `# 📍 Auto-Nav:` comments on URL changes during runs. |
-| **Workers** | Max concurrent hunt files in Test Explorer (1–4). |
-
-Changes save to `manul_engine_configuration.json` at the workspace root. A *Generate Default Config* button creates the file if absent. Ollama status indicator shows live reachability at `localhost:11434` with model autocomplete.
-
-### Cache browser
-
-The **Cache** sidebar tree shows per-site entries from ManulEngine's persistent controls cache:
-
-- Browse sites and their cached page entries
-- Clear cache for a specific site (trash icon on hover)
-- Clear all entries at once (toolbar button)
-- Refresh the tree manually
-
-### Step Builder
-
-A sidebar panel for inserting hunt steps with a single click — no typing required.
-
-- **New Hunt File** — prompts for a name, creates a `.hunt` with a starter template in the `tests_home` directory, and opens it
-- **Live Page Scanner** — paste a URL and click **Run Scan**; the extension invokes `manul scan <URL>` as a child process, then opens the generated `draft.hunt` automatically
-- **Step buttons** — generated from the shared DSL registry, covering the full runtime command set: `OPEN APP`, explicit waits, strict `VERIFY` checks, `VERIFY SOFTLY`, `VERIFY VISUAL`, `WAIT FOR RESPONSE`, `MOCK`, `SCAN PAGE`, `CALL PYTHON`, `SET`, `DEBUG VARS`, and the rest of the core verbs
-- **Contextual builder** — compose `NEAR`, `ON HEADER`, `ON FOOTER`, and `INSIDE '<container>' row with '<text>'` qualifiers without typing DSL by hand
-- **Proximity Builder** — interactive form for contextual Click / Fill / Verify steps with qualifier picker, target/anchor inputs, and live DSL preview before inserting
-- **Hooks buttons** — insert pre-filled `[SETUP]` / `[TEARDOWN]` blocks
-- Each click appends to the active `.hunt` file and positions the cursor inside the first `''` pair
-
-### Hunt DSL autocomplete
-
-`CompletionItemProvider` for `.hunt` files with three layers:
-
-- **Metadata directives** — `@context:`, `@title:`, `@blueprint:`, `@var:`, `@script:`, `@tags:`, `@data:`, `@schedule:`
-- **Hook blocks** — `[SETUP]` and `[TEARDOWN]`
-- **DSL snippets** — every command from the `MANUL_DSL_COMMANDS` registry with tab-stop placeholders
-
-Completions are sourced from the shared runtime module — adding a DSL command there automatically exposes it in both the completion list and the Step Builder sidebar.
-
-### Visual explainability (hover tooltips)
-
-Run a hunt in **Debug Mode**, then hover over any step line. A rich Markdown tooltip shows the full per-element scoring breakdown — Text, Attributes, Semantics, Proximity, Cache — attached to the exact line.
-
-- **Hover tooltips** on each resolved step with the full scoring rationale
-- **Dedicated output channel** — scoring breakdown routed to "ManulEngine: Explain Heuristics", separate from test output
-
-Together these form a layered debug workflow: Test Explorer shows *where* the run is, QuickPick controls *how* execution moves, hover explains *why* the runtime chose the current target.
+- **Run and debug `.hunt` files** — one-click execution, gutter breakpoints, floating QuickPick debug overlay, and live Test Explorer timeline
+- **Deterministic explainability** — hover any step mid-debug to see the full per-channel scoring breakdown (Text, Attributes, Semantics, Proximity, Cache) that explains *why* a target was chosen
+- **Step Builder** — insert any DSL command with a single click; compose contextual qualifiers (`NEAR`, `ON HEADER`, `INSIDE row`) with a live preview, no DSL syntax to memorize
+- **Test Explorer integration** — run individual hunts or entire directories, see nested step items with pass/fail/skipped status streaming in real time
+- **MCP Server** — pair with the companion MCP extension to let GitHub Copilot drive a real browser session via `manul_run_step`, `manul_scan_page`, and `manul_save_hunt`
 
 ---
 
 ## Quickstart
 
-### Install
+### 1. Install the runtime
 
 ```bash
 pip install manul-engine==0.0.9.28
 playwright install chromium
 ```
 
-Optional local AI fallback (not required):
-
-```bash
-pip install "manul-engine[ai]==0.0.9.28"
-ollama pull qwen2.5:0.5b && ollama serve
-```
-
-### Configure
-
-Install the extension:
+### 2. Install the extension
 
 ```bash
 code --install-extension manul-engine.manul-engine
 ```
 
-Open your project folder in VS Code. The extension activates automatically when a `.hunt` file is present. Run `ManulEngine: Generate Default Config` from the Command Palette to create `manul_engine_configuration.json`:
+### 3. Create a hunt file
 
-```json
-{
-  "model": null,
-  "browser": "chromium",
-  "controls_cache_enabled": true,
-  "semantic_cache_enabled": true
-}
-```
-
-This is the minimal recommended config — fully heuristics-only, no AI dependency.
-
-### Run
-
-Open or create a `.hunt` file and click `▶` in the editor title bar, or use:
-
-```bash
-# from the integrated terminal
-manul tests/login.hunt
-manul tests/
-manul --headless --html-report tests/
-```
-
-The extension delegates execution to the real runtime, so the same workspace can use normal browser hunts, desktop/Electron hunts through `OPEN APP` + `executable_path`, and Python-backed hooks without any extension-specific rewrite.
-
----
-
-## Example hunt file
+Open your project in VS Code. Create `tests/hello.hunt`:
 
 ```text
-@context: Login and verify dashboard
-@title: smoke_login
-@tags: smoke, auth
+@context: Verify the example page loads
+@title: hello
 
-@var: {user_email} = user@example.com
-@var: {password}   = secret
-@script: {auth}    = helpers.auth
-
-STEP 1: Login
-    NAVIGATE to https://example.com/login
-    FILL 'Email' field with '{user_email}'
-    VERIFY "Email" field has value "{user_email}"
-    FILL 'Password' field with '{password}'
-    CALL PYTHON {auth}.issue_token into {login_token}
-    CLICK the 'Sign In' button
-    VERIFY that 'Welcome' is present
+STEP 1: Open the page
+    NAVIGATE to https://example.com
+    VERIFY that 'Example Domain' is present
 
 DONE.
 ```
 
-See the [ManulEngine README](https://github.com/alexbeatnik/ManulEngine) for the full DSL reference.
+### 4. Run it
+
+Click `▶` in the editor title bar — or right-click the file → *ManulEngine: Run Hunt File*. Output streams into the **ManulEngine** panel. Done.
+
+**From the terminal:**
+
+```bash
+manul tests/hello.hunt
+manul tests/                       # run every .hunt in the directory
+manul --headless --html-report tests/
+```
 
 ---
 
-## Custom controls
+## Hands-on walkthroughs
 
-Some UI elements cannot be reliably targeted by heuristics: React virtual tables, canvas datepickers, WebGL widgets. **Custom Controls** route specific `.hunt` steps to hand-written Playwright Python while the hunt file stays plain English.
+### Run a hunt
 
-1. Create a `controls/` directory in the workspace root.
-2. Add a `.py` file with a `@custom_control` handler:
-   ```python
-   # controls/booking.py
-   from manul_engine import custom_control
+```text
+@context: Login flow smoke test
+@title: smoke_login
+@tags: smoke, auth
 
-   @custom_control(page="Checkout Page", target="React Datepicker")
-   async def handle_datepicker(page, action_type, value):
-       await page.locator(".react-datepicker__input-container input").fill(value or "")
-   ```
-3. Map the URL to `"Checkout Page"` in `pages.json` (editable via the Config Panel).
-4. Write a normal `.hunt` step:
-   ```text
-   FILL 'React Datepicker' with '2026-12-25'
-   ```
+@var: {email}    = user@example.com
+@var: {password} = secret
 
-Custom Controls are loaded automatically on engine startup. Debug breakpoints, Test Explorer, and live output streaming all work identically whether a step uses a custom control or the standard heuristic pipeline.
+STEP 1: Login
+    NAVIGATE to https://app.example.com/login
+    FILL 'Email' field with '{email}'
+    FILL 'Password' field with '{password}'
+    CLICK the 'Sign In' button
+    VERIFY that 'Dashboard' is present
 
-> **Team workflow:** QA authors keep writing plain English. SDETs own the `controls/` directory. The `.hunt` file never changes when the underlying Playwright logic evolves.
+DONE.
+```
+
+| Method | How |
+|--------|-----|
+| **Editor title button** | Click `▶` in the top-right when a `.hunt` file is open |
+| **Explorer context menu** | Right-click a `.hunt` file → *ManulEngine: Run Hunt File* |
+| **Terminal mode** | Right-click → *ManulEngine: Run Hunt File in Terminal* (raw integrated terminal) |
+
+Output streams live into a dedicated **ManulEngine** output channel. The extension delegates to the real `manul` CLI — browser hunts, desktop/Electron hunts (`OPEN APP` + `executable_path`), and Python hooks all work identically.
+
+### Debug a hunt
+
+1. **Set breakpoints** — click the editor gutter next to any step line.
+2. **Launch Debug** — use the *Debug* profile in Test Explorer, or *ManulEngine: Debug Hunt File* from the Command Palette.
+3. **The floating QuickPick overlay appears** — no modal dialogs, no stolen focus:
+
+   | Action | What it does |
+   |--------|--------------|
+   | **Next Step** | Advance exactly one step and pause again |
+   | **Continue All** | Run until the next gutter breakpoint or end of hunt |
+   | **Explain Next Step** | Show the live heuristic explanation for the paused step inline |
+   | **Stop** | Dismiss the overlay and terminate the run cleanly |
+
+4. **Persistent magenta highlight** — the resolved target element is outlined with a `4px solid #ff00ff` border + glow in the browser while paused. Removed automatically before the action executes.
+5. **Edit-and-re-explain** — change the paused step line in the editor, then trigger **Explain Next Step** again. The extension sends the current editor text instead of stale cached text.
+
+**Outcome:** You see exactly where execution paused, control how it advances, and interrogate the engine's reasoning at every step.
+
+### Explainability
+
+During a debug session, **hover any step line** in the editor. A rich Markdown tooltip shows the full scoring breakdown:
+
+```
+Target: 'Sign In' button
+Score:   0.87 (high confidence)
+─────────────────────────────
+Text:       0.95  (exact match on innerText)
+Attributes: 0.80  (aria-label partial)
+Semantics:  0.85  (button role + submit type)
+Proximity:  0.90  (NEAR 'Password' qualifier)
+Cache:      —     (no prior cache hit)
+```
+
+A separate **ManulEngine: Explain Heuristics** output channel captures the full scoring detail for every step.
+
+**Outcome:** You never guess why the engine picked a specific element. Every score is normalized 0.0–1.0, per-channel, per-element.
+
+### Step Builder and Proximity Builder
+
+The **Step Builder** sidebar inserts DSL commands with a single click — every command from the DSL registry is available as a button.
+
+The **Proximity Builder** form lets you compose contextual steps visually:
+
+1. Choose a step kind: **Click**, **Fill**, or **Verify**
+2. Set the target, element type, and optional value
+3. Pick a context qualifier: `NEAR`, `ON HEADER`, `ON FOOTER`, or `INSIDE row`
+4. Preview the generated DSL line, then click **Insert**
+
+```text
+Click 'Delete' button INSIDE 'Actions' row with 'John Doe'
+```
+
+**Outcome:** Zero DSL memorization. The preview shows exactly what will be inserted.
+
+### Cache Browser
+
+The **Cache** sidebar tree shows per-site entries from ManulEngine's persistent controls cache:
+
+- Browse sites and their cached page entries
+- Clear cache for a specific site (trash icon on hover)
+- Clear all entries at once (toolbar button)
+
+**Outcome:** Inspect and manage the locator cache without touching disk files.
+
+### Custom controls
+
+Some UI widgets defy heuristic targeting — React virtual tables, canvas datepickers, WebGL overlays. **Custom Controls** let SDETs write Playwright Python while the hunt file stays plain English.
+
+```python
+# controls/booking.py
+from manul_engine import custom_control
+
+@custom_control(page="Checkout Page", target="React Datepicker")
+async def handle_datepicker(page, action_type, value):
+    await page.locator(".react-datepicker__input-container input").fill(value or "")
+```
+
+The hunt file stays unchanged:
+
+```text
+FILL 'React Datepicker' with '2026-12-25'
+```
+
+Debug breakpoints, Test Explorer, and live output streaming work identically whether a step hits a custom control or the standard heuristic pipeline.
+
+> **Team workflow:** QA authors keep writing plain English. SDETs own the `controls/` directory. The hunt file never changes when the Playwright logic evolves.
 
 ---
 
-## Auto-detection of the `manul` executable
+## Key features
 
-The extension probes the following locations in order (platform-aware):
+### Dual-persona workflow
 
-1. Custom path from `manulEngine.manulPath` setting
-2. `.venv/bin/manul` in the workspace root (also `venv/`, `env/`, `.env/`)
-3. `~/.local/bin/manul` (pip --user, Linux/macOS)
-4. `~/Library/Python/*/bin/manul` (pip --user, macOS)
-5. `~/.local/pipx/venvs/manul-engine/bin/manul` (pipx)
-6. `/opt/homebrew/bin/manul` (Homebrew, Apple Silicon)
-7. `/usr/local/bin/manul`, `/usr/bin/manul` (system-wide)
-8. Shell login init lookup (`$SHELL -lc 'command -v manul'`) — sources fish/zsh/bash/pyenv/conda init
-9. Windows: `%APPDATA%\Python\*\Scripts\manul.exe`, `%LOCALAPPDATA%\Programs\Python\*\Scripts\manul.exe`
+- **QA / Business Analysts / Ops** — write automation in plain English, no selectors, no code
+- **Developers / SDETs** — write Python control hooks for complex widgets; the rest of the team keeps writing English
+
+### Language support
+
+- Syntax highlighting, comment toggling (`#`), bracket/quote matching, file icon
+- `CompletionItemProvider` with three layers: metadata directives (`@context:`, `@var:`, `@tags:`, `@data:`, `@schedule:`), hook blocks (`[SETUP]`/`[TEARDOWN]`), and full DSL snippets with tab-stop placeholders
+
+### Test Explorer
+
+- Hunt files appear as top-level items (one per file); each step/block is a nested child
+- **Run** and **Debug** profiles
+- Child items stream from the engine's live hierarchical stdout — the timeline reflects real runtime state, not a reconstructed summary
+- Failed steps include the engine output as the failure message; unreached steps are marked skipped
+
+### Debug UX
+
+- **Floating QuickPick overlay** — Next Step, Continue All, Explain Next, Stop
+- **Persistent magenta highlight** on the resolved browser element while paused
+- **Edit-and-re-explain** workflow: modify the paused step, re-trigger Explain
+- Linux: VS Code window is raised via `xdotool`/`wmctrl`; 5-second `notify-send` on pause
+- `--break-lines` piped stdio protocol: Python emits a marker on stdout; the extension responds on stdin
+
+### Configuration panel
+
+Interactive sidebar for `manul_engine_configuration.json` — model selection, browser choice, timeouts, cache toggles, workers, screenshot mode, explain mode. Ollama status indicator with live reachability and model autocomplete.
+
+### Executable auto-detection
+
+The extension probes in order: custom `manulPath` setting → workspace `.venv/bin/manul` (also `venv/`, `env/`, `.env/`) → `~/.local/bin/manul` → pipx path → Homebrew → system path → shell login init lookup. Windows paths are covered too.
+
+### Conditional branching
+
+```text
+IF button 'Save' exists:
+        CLICK the 'Save' button
+ELIF text 'Error' is present:
+        VERIFY that 'Error' is present
+ELSE:
+        VERIFY that 'Fallback' is present
+```
+
+`IF`/`ELIF`/`ELSE` blocks are first-class: syntax highlighting, validation, Step Builder buttons, and autocomplete all support them.
 
 ---
 
-## Extension settings
+## Settings reference
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `manulEngine.manulPath` | `""` | Absolute path to the `manul` CLI. Leave empty to auto-detect. |
-| `manulEngine.configFile` | `manul_engine_configuration.json` | Config file name resolved from the workspace root. |
-| `manulEngine.workers` | `null` | Max concurrent hunt files in Test Explorer. Overrides `workers` in config. |
-| `manulEngine.htmlReport` | `false` | Generate a self-contained HTML report after each run. |
-| `manulEngine.retries` | `0` | Retry failed hunt files N times before marking as failed (0–10). |
+| `manulEngine.manulPath` | `""` | Absolute path to `manul` CLI. Empty = auto-detect. |
+| `manulEngine.configFile` | `manul_engine_configuration.json` | Config file name at workspace root. |
+| `manulEngine.workers` | `null` | Max concurrent hunts in Test Explorer (1–4). |
+| `manulEngine.htmlReport` | `false` | Generate HTML report after each run. |
+| `manulEngine.retries` | `0` | Retry failed hunts N times (0–10). |
 | `manulEngine.screenshotMode` | `"on-fail"` | `none`, `on-fail`, or `always`. |
-| `manulEngine.testsHome` | `"tests"` | Directory where Step Builder creates new hunt files. |
-| `manulEngine.autoAnnotate` | `false` | Sets `MANUL_AUTO_ANNOTATE=true` for runs. |
+| `manulEngine.testsHome` | `"tests"` | Directory for new hunt files. |
+| `manulEngine.autoAnnotate` | `false` | Insert `# 📍 Auto-Nav:` comments on URL changes. |
 | `manulEngine.explainMode` | `false` | Always enable detailed heuristic explain output. |
-| `manulEngine.verifyMaxRetries` | `null` | Override runtime polling retry count for `VERIFY` steps. |
-| `manulEngine.debugPauseTimeoutSeconds` | `300` | Auto-resume unattended debug pause after N seconds. `0` disables. |
+| `manulEngine.verifyMaxRetries` | `null` | Override polling retry count for `VERIFY` steps. |
+| `manulEngine.debugPauseTimeoutSeconds` | `300` | Auto-resume after N seconds. `0` = no timeout. |
 | `manulEngine.browser` | `"chromium"` | `chromium`, `firefox`, `webkit`, `chrome`, `msedge`, or `electron`. |
 
 ---
@@ -280,11 +261,11 @@ The extension probes the following locations in order (platform-aware):
 ## System requirements
 
 | | Minimum | Recommended |
-|---|---|---|
+|---|---------|-------------|
 | **Python** | 3.11+ | 3.12+ |
 | **RAM** | 4 GB | 8 GB |
 | **GPU** | none | none |
-| **Model** | — (heuristics-only) | `qwen2.5:0.5b` |
+| **Model** | — (heuristics-only) | `qwen2.5:0.5b` (optional) |
 
 ---
 
@@ -302,17 +283,17 @@ pip install manul-engine==0.0.9.28
 
 ### MCP Server for GitHub Copilot
 
-A separate extension that turns ManulEngine into a native MCP server. Copilot Chat gains tools like `manul_run_step`, `manul_run_goal`, `manul_scan_page`, and `manul_save_hunt` — driving a real browser session from natural language.
+Turns ManulEngine into a native MCP server. Copilot Chat gains tools like `manul_run_step`, `manul_run_goal`, `manul_scan_page`, and `manul_save_hunt` — driving a real browser session from natural language.
 
 ```bash
 code --install-extension manul-engine.manul-mcp-server
 ```
 
-[Marketplace](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-mcp-server) · [Developer guide](https://github.com/alexbeatnik/ManulMcpServer)
+[Marketplace](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-mcp-server) · [GitHub](https://github.com/alexbeatnik/ManulMcpServer)
 
 ### Python API (`ManulSession`)
 
-Async context manager for pure-Python automation. Routes every call through the full heuristic pipeline.
+Async context manager for pure-Python automation, routed through the full heuristic pipeline.
 
 ```python
 from manul_engine import ManulSession
@@ -326,10 +307,37 @@ async with ManulSession(headless=True) as session:
 
 ---
 
+## Contribute
+
+```bash
+git clone https://github.com/alexbeatnik/ManulEngineExtension
+cd ManulEngineExtension
+npm install
+npm run compile
+npx vitest run           # all tests must pass
+```
+
+1. Fork and create a feature branch
+2. Make changes, run `npx vitest run` and `npx eslint .`
+3. Open a PR against `main`
+
+Custom controls go in `controls/` at the workspace root. The DSL command registry lives in `src/shared/index.ts` — adding a command there auto-exposes it in autocomplete, Step Builder, and the validation pipeline.
+
+---
+
+## Get involved
+
+Try the extension. [File an issue](https://github.com/alexbeatnik/ManulEngineExtension/issues) if something breaks. [Open a discussion](https://github.com/alexbeatnik/ManulEngineExtension/discussions) for ideas and feedback. PRs welcome.
+
+---
+
 ## What's New in 0.0.9.28
 
 - Bumped extension manifest to `0.0.928` and pinned ManulEngine runtime to `0.0.9.28`.
-- README rewritten to match the ManulEngine documentation style — no emojis in headers, clean separators, consolidated quickstart flow.
+- Added `IF`/`ELIF`/`ELSE` conditional branching — syntax highlighting, validator, Step Builder buttons, autocomplete.
+- Updated all DSL contracts from engine (labels to ALL\_UPPERCASE canonical form, new `casePolicy` and `elementTypeHint` metadata).
+- Added new `MANUL_DEBUG_CONTRACT.md` from engine.
+- Removed "Add Demo Tests" and "Add Default Prompts" buttons and related scaffolding.
 
 <details>
 <summary>0.0.9.27</summary>
