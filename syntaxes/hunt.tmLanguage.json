@@ -113,7 +113,7 @@
     },
     "system-keyword": {
       "name": "keyword.control.hunt",
-      "match": "(?i)\\b(NAVIGATE to|NAVIGATE|OPEN\\s+APP|VERIFY VISUAL|VERIFY SOFTLY|VERIFY that|VERIFY|EXTRACT|SCROLL DOWN|SCROLL|PRESS ENTER|PRESS|RIGHT CLICK|UPLOAD|MOCK\\s+(?:GET|POST|PUT|PATCH|DELETE)|WAIT FOR RESPONSE|WAIT FOR|WAIT|DONE|DOUBLE CLICK|HOVER|CALL PYTHON|SCAN PAGE|SET|PRINT|DEBUG VARS|DEBUG|PAUSE)\\b"
+      "match": "(?i)\\b(NAVIGATE to|NAVIGATE|OPEN\\s+APP|VERIFY VISUAL|VERIFY SOFTLY|VERIFY that|VERIFY|EXTRACT|SCROLL DOWN|SCROLL|PRESS ENTER|PRESS|RIGHT CLICK|UPLOAD|MOCK\\s+(?:GET|POST|PUT|PATCH|DELETE)|WAIT FOR RESPONSE|WAIT FOR|WAIT|DONE|DOUBLE CLICK|HOVER|CALL PYTHON|SCAN PAGE|SET|PRINT|DEBUG VARS|DEBUG|PAUSE|IF|ELIF|ELSE)\\b"
     },
     "action-verb": {
       "name": "keyword.operator.action.hunt",
@@ -145,7 +145,7 @@
     },
     "modifier": {
       "name": "keyword.other.modifier.hunt",
-      "match": "(?i)\\b(if exists|optional|NOT|DISABLED|ENABLED|SOFTLY|VISUAL|ON HEADER|ON FOOTER|is present|is checked|is NOT checked|is NOT present|be visible|be hidden|disappear|into|from|to|that|the|with|near|inside|on|header|footer|row|field|button|link|checkbox|dropdown|input|has|text|placeholder|value|args)\\b"
+      "match": "(?i)\\b(if exists|optional|NOT|DISABLED|ENABLED|SOFTLY|VISUAL|ON HEADER|ON FOOTER|is present|is checked|is NOT checked|is NOT present|be visible|be hidden|disappear|into|from|to|that|the|with|near|inside|on|header|footer|row|field|button|link|checkbox|dropdown|input|has|text|placeholder|value|args|exists|contains)\\b"
     }
   }
 }

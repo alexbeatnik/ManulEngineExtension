@@ -1,7 +1,7 @@
 # ManulEngine — CLI Contract
 
 > **Machine-readable contract for the `manul` CLI interface.**
-> Consumed by the VS Code extension, CI/CD integrations, and other downstream tooling.
+> Consumed by Manul Studio, VS Code extension, CI/CD integrations, and other downstream tooling.
 
 ```json
 {

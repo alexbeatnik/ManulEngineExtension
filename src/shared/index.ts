@@ -63,8 +63,11 @@ export {
   MANUL_DSL_CONTRACT,
   RE_COMMENT,
   RE_DONE,
+  RE_ELIF,
+  RE_ELSE,
   RE_HOOK_CLOSE,
   RE_HOOK_OPEN,
+  RE_IF,
   RE_METADATA,
   RE_STEP,
   isValidHuntActionLine,
@@ -181,7 +184,7 @@ export function getManulDslContextSuggestions(linePrefix: string): ManulDslConte
 export const MANUL_DSL_COMMANDS: ManulDslCommand[] = [
   { id: 'navigate',              label: 'Navigate',              icon: '🌐', uiText: "NAVIGATE to ''",                                                  snippet: 'NAVIGATE to ${1:url}',                                                        description: 'Navigates the browser to a specific URL and waits for DOM settlement.',                 example: 'NAVIGATE to https://example.com/login' },
   { id: 'open-app',              label: 'Open App',              icon: '📦', uiText: 'OPEN APP',                                                         snippet: 'OPEN APP',                                                                    description: 'Attaches to an Electron or desktop app window instead of navigating to a URL.',        example: 'OPEN APP' },
-  { id: 'click',                 label: 'Click',                 icon: '🖱️', uiText: "Click the '' button",                                             snippet: "Click the '${1:target}' button",                                              description: 'Clicks a resolved element in clickable interaction mode.',                              example: "Click the 'Login' button" },
+  { id: 'click',                 label: 'Click',                 icon: '🖱️', uiText: "CLICK the ''",                                                snippet: "CLICK the '${1:target}'${2: button}",                                         description: 'Clicks a resolved element in clickable interaction mode.',                              example: "CLICK the 'Login' button" },
   { id: 'double-click',          label: 'Double Click',          icon: '🖱️', uiText: "DOUBLE CLICK the ''",                                             snippet: "DOUBLE CLICK the '${1:target}'",                                              description: 'Double-clicks a resolved element.',                                                     example: "DOUBLE CLICK the 'Project row'" },
   { id: 'check',                 label: 'Check',                 icon: '☑️', uiText: "Check the checkbox for ''",                                       snippet: "Check the checkbox for '${1:target}'",                                        description: 'Checks a checkbox element.',                                                            example: "Check the checkbox for 'Remember me'" },
   { id: 'uncheck',               label: 'Uncheck',               icon: '☐', uiText: "Uncheck the checkbox for ''",                                      snippet: "Uncheck the checkbox for '${1:target}'",                                      description: 'Unchecks a checkbox element.',                                                          example: "Uncheck the checkbox for 'Subscribe'" },
@@ -213,6 +216,9 @@ export const MANUL_DSL_COMMANDS: ManulDslCommand[] = [
   { id: 'debug-vars',            label: 'Debug Vars',            icon: '🔬', uiText: 'DEBUG VARS',                                                       snippet: 'DEBUG VARS',                                                                  description: 'Prints the current state of all runtime variables.',                                     example: 'DEBUG VARS' },
   { id: 'pause',                 label: 'Pause',                 icon: '⏸️', uiText: 'PAUSE',                                                            snippet: 'PAUSE',                                                                       description: 'Alias for a debug pause marker in hunt files.',                                          example: 'PAUSE' },
   { id: 'done',                  label: 'Done',                  icon: '🏁', uiText: 'DONE.',                                                            snippet: 'DONE.',                                                                       description: 'Explicitly ends the mission.',                                                           example: 'DONE.' },
+  { id: 'if-block',               label: 'If',                    icon: '🔀', uiText: "IF button 'Save' exists:",                                            snippet: "IF ${1:condition}:\n        ${2:action}",                                     description: 'Block-style conditional branching with indented body.',                                  example: "IF button 'Save' exists:\n        CLICK the 'Save' button" },
+  { id: 'elif-block',             label: 'Elif',                  icon: '🔀', uiText: "ELIF text 'Error' is present:",                                       snippet: "ELIF ${1:condition}:\n        ${2:action}",                                   description: 'Alternative branch in an IF block.',                                                    example: "ELIF text 'Error' is present:\n        VERIFY that 'Error' is present" },
+  { id: 'else-block',             label: 'Else',                  icon: '🔀', uiText: 'ELSE:',                                                               snippet: "ELSE:\n        ${1:action}",                                                  description: 'Default branch in an IF block.',                                                        example: "ELSE:\n        VERIFY that 'Fallback' is present" },
 ]
 
 export function compareVersions(a: string, b: string): number {

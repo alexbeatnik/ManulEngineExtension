@@ -1,7 +1,7 @@
 # ManulEngine — Configuration Contract
 
 > **Machine-readable contract for the ManulEngine configuration surface.**
-> Consumed by the VS Code extension config panel, CI/CD integrations, and downstream tooling.
+> Consumed by VS Code extension config panel, Manul Studio, CI/CD integrations, and downstream tooling.
 
 ```json
 {

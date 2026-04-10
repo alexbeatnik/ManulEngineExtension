@@ -91,6 +91,9 @@ export const RE_HOOK_CLOSE = new RegExp(
 export const RE_STEP = /^\s*(?:\d+\.\s*)?STEP\s*\d*\s*:/i
 export const RE_DONE = /^\s*(?:\d+\.\s*)?DONE\s*\.?\s*$/i
 export const RE_COMMENT = new RegExp(`^\\s*${escapeRegExp(MANUL_DSL_CONTRACT.comments.lineComment)}`)
+export const RE_IF = /^\s*(?:\d+\.\s*)?IF\b.+:\s*$/i
+export const RE_ELIF = /^\s*(?:\d+\.\s*)?ELIF\b.+:\s*$/i
+export const RE_ELSE = /^\s*(?:\d+\.\s*)?ELSE\s*:\s*$/i
 
 function countQuotedFragments(line: string): number {
   return line.match(QUOTED_FRAGMENT_RE)?.length ?? 0
@@ -312,7 +315,7 @@ export function validateHuntDocument(content: string): HuntValidationDiagnostic[
     const line = lines[index]
     const trimmed = line.trim()
 
-    if (!trimmed || RE_COMMENT.test(line) || RE_METADATA.test(line) || RE_STEP.test(line) || RE_DONE.test(line)) {
+    if (!trimmed || RE_COMMENT.test(line) || RE_METADATA.test(line) || RE_STEP.test(line) || RE_DONE.test(line) || RE_IF.test(line) || RE_ELIF.test(line) || RE_ELSE.test(line)) {
       continue
     }
 
