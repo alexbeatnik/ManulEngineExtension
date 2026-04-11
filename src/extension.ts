@@ -79,17 +79,38 @@ function applyHuntDecorations(
   for (let i = 0; i < doc.lineCount; i++) {
     if (/^\s*#/.test(doc.lineAt(i).text)) { commentLines.add(i); }
   }
-  const notComment = (r: vscode.Range) => !commentLines.has(r.start.line);
 
-  const verifyRanges = collectRanges(doc, VERIFY_RE, 1).filter(notComment);
+  // Build list of quoted-string intervals per line so decorations skip them
+  const QUOTE_RE = /(?:'[^']*'|"[^"]*")/g;
+  const quotedIntervals: Map<number, [number, number][]> = new Map();
+  for (let i = 0; i < doc.lineCount; i++) {
+    if (commentLines.has(i)) { continue; }
+    const line = doc.lineAt(i).text;
+    QUOTE_RE.lastIndex = 0;
+    let qm: RegExpExecArray | null;
+    while ((qm = QUOTE_RE.exec(line)) !== null) {
+      if (!quotedIntervals.has(i)) { quotedIntervals.set(i, []); }
+      quotedIntervals.get(i)!.push([qm.index, qm.index + qm[0].length]);
+    }
+  }
+
+  const notExcluded = (r: vscode.Range) => {
+    if (commentLines.has(r.start.line)) { return false; }
+    const intervals = quotedIntervals.get(r.start.line);
+    if (!intervals) { return true; }
+    const col = r.start.character;
+    return !intervals.some(([s, e]) => col >= s && col < e);
+  };
+
+  const verifyRanges = collectRanges(doc, VERIFY_RE, 1).filter(notExcluded);
   const verifySet = new Set(verifyRanges.map((r) => `${r.start.line}:${r.start.character}`));
-  const systemAll = collectRanges(doc, SYSTEM_RE, 1).filter(notComment);
+  const systemAll = collectRanges(doc, SYSTEM_RE, 1).filter(notExcluded);
   const systemRanges = systemAll.filter((r) => !verifySet.has(`${r.start.line}:${r.start.character}`));
 
   editor.setDecorations(types.verify, verifyRanges);
   editor.setDecorations(types.system, systemRanges);
-  editor.setDecorations(types.cond,   collectRanges(doc, COND_RE, 1).filter(notComment));
-  editor.setDecorations(types.action, collectRanges(doc, ACTION_RE, 1).filter(notComment));
+  editor.setDecorations(types.cond,   collectRanges(doc, COND_RE, 1).filter(notExcluded));
+  editor.setDecorations(types.action, collectRanges(doc, ACTION_RE, 1).filter(notExcluded));
 }
 
 function registerHuntHighlighter(context: vscode.ExtensionContext): void {
