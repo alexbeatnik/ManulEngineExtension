@@ -1,32 +1,35 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <!-- Manul cat head with goggles — bold monochrome for VS Code activity bar -->
+  <!-- Manul cat head with goggles — clean monochrome for VS Code activity bar -->
   <defs>
     <mask id="m">
       <rect width="24" height="24" fill="black"/>
-      <!-- Head silhouette in white = visible area -->
-      <!-- Ears -->
-      <polygon points="3,9 5.5,1.5 9.5,8" fill="white"/>
-      <polygon points="21,9 18.5,1.5 14.5,8" fill="white"/>
-      <!-- Main head -->
-      <ellipse cx="12" cy="12.5" rx="9.5" ry="8.5" fill="white"/>
-      <!-- Cheeks -->
-      <ellipse cx="5" cy="15" rx="4.5" ry="3.5" fill="white"/>
-      <ellipse cx="19" cy="15" rx="4.5" ry="3.5" fill="white"/>
-      <!-- Chin -->
-      <ellipse cx="12" cy="20" rx="6" ry="3.5" fill="white"/>
-      <!-- Cut out goggle details in black = transparent -->
-      <!-- Band -->
-      <rect x="1" y="9" width="22" height="2.5" rx="1" fill="black"/>
-      <!-- Left goggle ring -->
-      <circle cx="8.5" cy="12" r="4.2" fill="black"/>
-      <circle cx="8.5" cy="12" r="3.2" fill="white"/>
-      <circle cx="8.5" cy="12" r="2.2" fill="black"/>
-      <!-- Right goggle ring -->
-      <circle cx="15.5" cy="12" r="4.2" fill="black"/>
-      <circle cx="15.5" cy="12" r="3.2" fill="white"/>
-      <circle cx="15.5" cy="12" r="2.2" fill="black"/>
+      <!-- Ears with tufts -->
+      <polygon points="3.5,9.5 5,2 7,4 9,9" fill="white"/>
+      <polygon points="20.5,9.5 19,2 17,4 15,9" fill="white"/>
+      <!-- Head — wide flat manul shape -->
+      <ellipse cx="12" cy="14" rx="10" ry="8.5" fill="white"/>
+      <!-- Fluffy cheek tufts -->
+      <ellipse cx="4" cy="15.5" rx="3.8" ry="3" fill="white"/>
+      <ellipse cx="20" cy="15.5" rx="3.8" ry="3" fill="white"/>
+
+      <!-- Goggle band -->
+      <rect x="2" y="10" width="20" height="2" rx="1" fill="black"/>
+      <!-- Left goggle -->
+      <circle cx="8" cy="13" r="4" fill="black"/>
+      <circle cx="8" cy="13" r="3" fill="white"/>
+      <circle cx="8" cy="13" r="1.8" fill="black"/>
+      <!-- Right goggle -->
+      <circle cx="16" cy="13" r="4" fill="black"/>
+      <circle cx="16" cy="13" r="3" fill="white"/>
+      <circle cx="16" cy="13" r="1.8" fill="black"/>
+      <!-- Bridge between goggles -->
+      <rect x="11" y="11.5" width="2" height="3" rx="0.5" fill="black"/>
+
       <!-- Nose -->
-      <ellipse cx="12" cy="16.2" rx="1.2" ry="0.8" fill="black"/>
+      <path d="M12,17.5 l-1,0.8 l2,0 z" fill="black"/>
+      <!-- Mouth lines -->
+      <line x1="11" y1="18.3" x2="9.5" y2="19" stroke="black" stroke-width="0.6" stroke-linecap="round"/>
+      <line x1="13" y1="18.3" x2="14.5" y2="19" stroke="black" stroke-width="0.6" stroke-linecap="round"/>
     </mask>
   </defs>
   <rect width="24" height="24" fill="currentColor" mask="url(#m)"/>
