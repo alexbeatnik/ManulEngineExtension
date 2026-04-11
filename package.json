@@ -39,6 +39,36 @@
     "package.json"
   ],
   "contributes": {
+    "configurationDefaults": {
+      "editor.tokenColorCustomizations": {
+        "textMateRules": [
+          {
+            "scope": "storage.type.hunt",
+            "settings": {
+              "foreground": "#569CD6"
+            }
+          },
+          {
+            "scope": "keyword.control.conditional.hunt",
+            "settings": {
+              "foreground": "#C586C0"
+            }
+          },
+          {
+            "scope": "support.function.verify.hunt",
+            "settings": {
+              "foreground": "#4EC9B0"
+            }
+          },
+          {
+            "scope": "entity.name.function.action.hunt",
+            "settings": {
+              "foreground": "#DCDCAA"
+            }
+          }
+        ]
+      }
+    },
     "breakpoints": [
       {
         "language": "hunt"

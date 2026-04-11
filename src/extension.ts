@@ -24,7 +24,101 @@ import { registerHuntDiagnostics } from "./huntDiagnostics";
 import { registerDoctorCommand } from "./manulDoctor";
 import { disposeExplainScorePanel } from "./explainScorePanel";
 
+// ── Hunt keyword decoration highlighter ──────────────────────────────────────
+// Bypasses textMateRules / theme limitations by applying VS Code decorations
+// directly. Guarantees 4 distinct keyword colours regardless of colour theme.
+const VERIFY_RE   = /\b(VERIFY\s+VISUAL|VERIFY\s+SOFTLY|VERIFY\s+that|VERIFY)\b/gi;
+const SYSTEM_RE   = /\b(NAVIGATE\s+to|NAVIGATE|OPEN\s+APP|EXTRACT|SCROLL\s+DOWN|SCROLL|PRESS\s+ENTER|PRESS|RIGHT\s+CLICK|UPLOAD|MOCK\s+(?:GET|POST|PUT|PATCH|DELETE)|WAIT\s+FOR\s+RESPONSE|WAIT\s+FOR|WAIT|DONE|DOUBLE\s+CLICK|CLICK|HOVER|CALL\s+PYTHON|SCAN\s+PAGE|SET|PRINT|DEBUG\s+VARS|DEBUG|PAUSE)\b/gi;
+const COND_RE     = /(?:^|\n)\s*(?:\d+\.\s*)?(IF|ELIF|ELSE)\b/gi;
+const ACTION_RE   = /\b(Fill|Type|Select|Choose|Check|Uncheck|Drag|Drop|Locate|Enter)\b/gi;
+
+function createHuntDecoTypes(): {
+  system: vscode.TextEditorDecorationType;
+  cond: vscode.TextEditorDecorationType;
+  action: vscode.TextEditorDecorationType;
+  verify: vscode.TextEditorDecorationType;
+} {
+  return {
+    system: vscode.window.createTextEditorDecorationType({ color: "#569CD6" }),
+    cond:   vscode.window.createTextEditorDecorationType({ color: "#C586C0" }),
+    action: vscode.window.createTextEditorDecorationType({ color: "#DCDCAA" }),
+    verify: vscode.window.createTextEditorDecorationType({ color: "#4EC9B0" }),
+  };
+}
+
+function collectRanges(doc: vscode.TextDocument, re: RegExp, group: number): vscode.Range[] {
+  const text = doc.getText();
+  const ranges: vscode.Range[] = [];
+  let m: RegExpExecArray | null;
+  re.lastIndex = 0;
+  while ((m = re.exec(text)) !== null) {
+    const kw = m[group];
+    const kwStart = m.index + m[0].indexOf(kw);
+    ranges.push(new vscode.Range(doc.positionAt(kwStart), doc.positionAt(kwStart + kw.length)));
+  }
+  return ranges;
+}
+
+function applyHuntDecorations(
+  editor: vscode.TextEditor,
+  types: ReturnType<typeof createHuntDecoTypes>,
+): void {
+  if (editor.document.languageId !== "hunt") { return; }
+  const doc = editor.document;
+  // Verify first (highest priority — its ranges excluded from system)
+  const verifyRanges = collectRanges(doc, VERIFY_RE, 1);
+  const verifySet = new Set(verifyRanges.map((r) => `${r.start.line}:${r.start.character}`));
+
+  // System keywords — skip positions already claimed by VERIFY
+  const systemAll = collectRanges(doc, SYSTEM_RE, 1);
+  const systemRanges = systemAll.filter((r) => !verifySet.has(`${r.start.line}:${r.start.character}`));
+
+  editor.setDecorations(types.verify, verifyRanges);
+  editor.setDecorations(types.system, systemRanges);
+  editor.setDecorations(types.cond,   collectRanges(doc, COND_RE, 1));
+  editor.setDecorations(types.action, collectRanges(doc, ACTION_RE, 1));
+}
+
+function registerHuntHighlighter(context: vscode.ExtensionContext): void {
+  const types = createHuntDecoTypes();
+  context.subscriptions.push(types.system, types.cond, types.action, types.verify);
+
+  const refresh = (editor?: vscode.TextEditor) => {
+    if (editor) { applyHuntDecorations(editor, types); }
+  };
+
+  // Apply on visible editors
+  vscode.window.visibleTextEditors.forEach((e) => refresh(e));
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor((e) => refresh(e)),
+    vscode.workspace.onDidChangeTextDocument((e) => {
+      const editor = vscode.window.visibleTextEditors.find((ed) => ed.document === e.document);
+      refresh(editor);
+    }),
+  );
+}
+
+/** One-time removal of stale textMateRules injected by earlier extension versions. */
+async function cleanupStaleTokenRules(): Promise<void> {
+  const staleScopes = new Set([
+    "keyword.control.hunt", "storage.type.hunt",
+    "keyword.control.conditional.hunt", "entity.name.function.action.hunt",
+    "support.function.verify.hunt",
+  ]);
+  const config = vscode.workspace.getConfiguration("editor");
+  const current: Record<string, unknown> =
+    config.get<Record<string, unknown>>("tokenColorCustomizations") ?? {};
+  const rules: { scope: string }[] =
+    (current as { textMateRules?: { scope: string }[] }).textMateRules ?? [];
+  const kept = rules.filter((r) => !staleScopes.has(r.scope));
+  if (kept.length === rules.length) { return; }
+  const updated = kept.length > 0 ? { ...current, textMateRules: kept } : {};
+  await config.update("tokenColorCustomizations", Object.keys(updated).length > 0 ? updated : undefined, vscode.ConfigurationTarget.Global);
+}
+
 export function activate(context: vscode.ExtensionContext): void {
+  registerHuntHighlighter(context);
+  cleanupStaleTokenRules();
   registerDoctorCommand(context);
   // Output channel reused across debug runs from the editor button / context menu.
   const debugOutputChannel = vscode.window.createOutputChannel("ManulEngine Debug");

@@ -5,7 +5,19 @@
   "patterns": [
     { "include": "#comment" },
     { "include": "#metadata" },
-    { "include": "#step" }
+    { "include": "#step-header" },
+    { "include": "#step-number" },
+    { "include": "#done-keyword" },
+    { "include": "#verify-keyword" },
+    { "include": "#conditional-keyword" },
+    { "include": "#set-command" },
+    { "include": "#system-keyword" },
+    { "include": "#action-verb" },
+    { "include": "#quoted-single" },
+    { "include": "#quoted-double" },
+    { "include": "#variable" },
+    { "include": "#url" },
+    { "include": "#modifier" }
   ],
   "repository": {
     "comment": {
@@ -54,70 +66,51 @@
         }
       ]
     },
-    "step": {
-      "patterns": [
-        {
-          "name": "meta.step-header.hunt",
-          "match": "^\\s*(?:\\d+\\.\\s*)?\\b(STEP)\\s*(\\d*)\\s*(:)\\s*(.*)",
-          "captures": {
-            "1": { "name": "keyword.control.step.hunt" },
-            "2": { "name": "constant.numeric.step-number.hunt" },
-            "3": { "name": "punctuation.separator.hunt" },
-            "4": { "name": "entity.name.section.hunt" }
-          }
-        },
-        {
-          "name": "meta.step.hunt",
-          "begin": "^\\s*(\\d+\\.)",
-          "beginCaptures": {
-            "1": { "name": "constant.numeric.step-number.hunt" }
-          },
-          "end": "$",
-          "patterns": [
-            { "include": "#set-command" },
-            { "include": "#system-keyword" },
-            { "include": "#action-verb" },
-            { "include": "#quoted-single" },
-            { "include": "#quoted-double" },
-            { "include": "#variable" },
-            { "include": "#url" },
-            { "include": "#modifier" }
-          ]
-        },
-        {
-          "name": "meta.freeform.hunt",
-          "begin": "^\\s*(?!#|@|\\d+\\.)",
-          "end": "$",
-          "patterns": [
-            { "include": "#set-command" },
-            { "include": "#system-keyword" },
-            { "include": "#action-verb" },
-            { "include": "#quoted-single" },
-            { "include": "#quoted-double" },
-            { "include": "#variable" },
-            { "include": "#url" },
-            { "include": "#modifier" }
-          ]
-        }
-      ]
+    "step-header": {
+      "name": "meta.step-header.hunt",
+      "match": "(?i)^\\s*(?:\\d+\\.\\s*)?\\b(STEP)\\s*(\\d*)\\s*(:)\\s*(.*)",
+      "captures": {
+        "1": { "name": "keyword.control.step.hunt" },
+        "2": { "name": "constant.numeric.step-number.hunt" },
+        "3": { "name": "punctuation.separator.hunt" },
+        "4": { "name": "entity.name.section.hunt" }
+      }
+    },
+    "step-number": {
+      "match": "^\\s*(\\d+\\.)",
+      "captures": {
+        "1": { "name": "constant.numeric.step-number.hunt" }
+      }
+    },
+    "done-keyword": {
+      "name": "keyword.control.hunt",
+      "match": "(?i)\\bDONE\\b\\.?"
+    },
+    "conditional-keyword": {
+      "name": "keyword.control.conditional.hunt",
+      "match": "(?i)\\b(IF|ELIF|ELSE)\\b"
     },
     "set-command": {
       "name": "meta.set-command.hunt",
       "match": "(?i)\\b(SET)\\s+(\\{?\\w+\\}?)\\s*(=)\\s*(.*)",
       "captures": {
-        "1": { "name": "keyword.control.hunt" },
+        "1": { "name": "storage.type.hunt" },
         "2": { "name": "variable.other.hunt" },
         "3": { "name": "keyword.operator.assignment.hunt" },
         "4": { "name": "string.unquoted.value.hunt" }
       }
     },
+    "verify-keyword": {
+      "name": "support.function.verify.hunt",
+      "match": "(?i)\\b(VERIFY VISUAL|VERIFY SOFTLY|VERIFY that|VERIFY)\\b"
+    },
     "system-keyword": {
-      "name": "keyword.control.hunt",
-      "match": "(?i)\\b(NAVIGATE to|NAVIGATE|OPEN\\s+APP|VERIFY VISUAL|VERIFY SOFTLY|VERIFY that|VERIFY|EXTRACT|SCROLL DOWN|SCROLL|PRESS ENTER|PRESS|RIGHT CLICK|UPLOAD|MOCK\\s+(?:GET|POST|PUT|PATCH|DELETE)|WAIT FOR RESPONSE|WAIT FOR|WAIT|DONE|DOUBLE CLICK|HOVER|CALL PYTHON|SCAN PAGE|SET|PRINT|DEBUG VARS|DEBUG|PAUSE|IF|ELIF|ELSE)\\b"
+      "name": "storage.type.hunt",
+      "match": "(?i)\\b(NAVIGATE to|NAVIGATE|OPEN\\s+APP|EXTRACT|SCROLL DOWN|SCROLL|PRESS ENTER|PRESS|RIGHT CLICK|UPLOAD|MOCK\\s+(?:GET|POST|PUT|PATCH|DELETE)|WAIT FOR RESPONSE|WAIT FOR|WAIT|DOUBLE CLICK|CLICK|HOVER|CALL PYTHON|SCAN PAGE|SET|PRINT|DEBUG VARS|DEBUG|PAUSE)\\b"
     },
     "action-verb": {
-      "name": "keyword.operator.action.hunt",
-      "match": "(?i)\\b(Click|Fill|Type|Select|Choose|Check|Uncheck|Hover|Drag|Drop|Locate|Navigate|Enter|Upload)\\b"
+      "name": "entity.name.function.action.hunt",
+      "match": "(?i)\\b(Fill|Type|Select|Choose|Check|Uncheck|Drag|Drop|Locate|Enter)\\b"
     },
     "quoted-single": {
       "name": "string.quoted.single.hunt",
