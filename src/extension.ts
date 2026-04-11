@@ -28,9 +28,9 @@ import { disposeExplainScorePanel } from "./explainScorePanel";
 // Bypasses textMateRules / theme limitations by applying VS Code decorations
 // directly. Colors are configurable via manulEngine.highlightColors setting.
 const VERIFY_RE   = /\b(VERIFY\s+VISUAL|VERIFY\s+SOFTLY|VERIFY\s+that|VERIFY)\b/gi;
-const SYSTEM_RE   = /\b(NAVIGATE\s+to|NAVIGATE|OPEN\s+APP|EXTRACT|SCROLL\s+DOWN|SCROLL|PRESS\s+ENTER|PRESS|RIGHT\s+CLICK|UPLOAD|MOCK\s+(?:GET|POST|PUT|PATCH|DELETE)|WAIT\s+FOR\s+RESPONSE|WAIT\s+FOR|WAIT|DONE|DOUBLE\s+CLICK|CLICK|HOVER|CALL\s+PYTHON|SCAN\s+PAGE|SET|PRINT|DEBUG\s+VARS|DEBUG|PAUSE)\b/gi;
+const SYSTEM_RE   = /\b(NAVIGATE\s+to|NAVIGATE|OPEN\s+APP|EXTRACT|SCROLL\s+DOWN|SCROLL|PRESS\s+ENTER|PRESS|RIGHT\s+CLICK|UPLOAD|MOCK\s+(?:GET|POST|PUT|PATCH|DELETE)|WAIT\s+FOR\s+RESPONSE|WAIT\s+FOR|WAIT|DONE|DOUBLE\s+CLICK|CLICK|HOVER|DRAG|CALL\s+PYTHON|SCAN\s+PAGE|SET|PRINT|DEBUG\s+VARS|DEBUG|PAUSE)\b/gi;
 const COND_RE     = /(?:^|\n)\s*(?:\d+\.\s*)?(IF|ELIF|ELSE)\b/gi;
-const ACTION_RE   = /\b(Fill|Type|Select|Choose|Check|Uncheck|Drag|Drop|Locate|Enter)\b/gi;
+const ACTION_RE   = /\b(Fill|Type|Select|Choose|Check|Uncheck|Locate|Enter)\b/gi;
 
 const DEFAULT_COLORS = { system: "#569CD6", conditional: "#C586C0", action: "#DCDCAA", verify: "#4EC9B0" };
 
@@ -80,23 +80,29 @@ function applyHuntDecorations(
     if (/^\s*#/.test(doc.lineAt(i).text)) { commentLines.add(i); }
   }
 
-  // Build list of quoted-string intervals per line so decorations skip them
+  // Build list of exclusion intervals per line (quoted strings + STEP descriptions)
   const QUOTE_RE = /(?:'[^']*'|"[^"]*")/g;
-  const quotedIntervals: Map<number, [number, number][]> = new Map();
+  const STEP_DESC_RE = /^(\s*(?:\d+\.\s*)?STEP\s*\d*\s*:)/i;
+  const excludedIntervals: Map<number, [number, number][]> = new Map();
   for (let i = 0; i < doc.lineCount; i++) {
     if (commentLines.has(i)) { continue; }
     const line = doc.lineAt(i).text;
+    const intervals: [number, number][] = [];
+    // Exclude STEP header description (everything after the colon)
+    const stepMatch = STEP_DESC_RE.exec(line);
+    if (stepMatch) { intervals.push([stepMatch[1].length, line.length]); }
+    // Exclude quoted strings
     QUOTE_RE.lastIndex = 0;
     let qm: RegExpExecArray | null;
     while ((qm = QUOTE_RE.exec(line)) !== null) {
-      if (!quotedIntervals.has(i)) { quotedIntervals.set(i, []); }
-      quotedIntervals.get(i)!.push([qm.index, qm.index + qm[0].length]);
+      intervals.push([qm.index, qm.index + qm[0].length]);
     }
+    if (intervals.length > 0) { excludedIntervals.set(i, intervals); }
   }
 
   const notExcluded = (r: vscode.Range) => {
     if (commentLines.has(r.start.line)) { return false; }
-    const intervals = quotedIntervals.get(r.start.line);
+    const intervals = excludedIntervals.get(r.start.line);
     if (!intervals) { return true; }
     const col = r.start.character;
     return !intervals.some(([s, e]) => col >= s && col < e);
