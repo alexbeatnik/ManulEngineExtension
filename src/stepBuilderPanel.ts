@@ -584,7 +584,7 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
     });
 
     /* ── DSL step buttons ───────────────────────────────────────── */
-    var SNIPPET_MAP = ${JSON.stringify(snippetMap)};
+    var SNIPPET_MAP = ${JSON.stringify(snippetMap).replace(/<\//g, '<\\/')};
     document.querySelectorAll('.sb-list-btn[data-cmd-id]').forEach(function(btn) {
       btn.addEventListener('click', function() {
         var template = SNIPPET_MAP[btn.dataset.cmdId];

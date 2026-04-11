@@ -339,7 +339,7 @@ export function validateHuntDocument(content: string): HuntValidationDiagnostic[
   }
 
   function setConditional(indent: number, state: ConditionalState): void {
-    // Remove any frames with indent >= current (they were deeper nested blocks that ended)
+    // Remove any frames with indent strictly greater than current (deeper nested blocks that ended)
     while (conditionalStack.length > 0 && conditionalStack[conditionalStack.length - 1].indent > indent) {
       conditionalStack.pop()
     }

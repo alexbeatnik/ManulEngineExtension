@@ -108,6 +108,7 @@ function registerHuntHighlighter(context: vscode.ExtensionContext): void {
       if (!e.affectsConfiguration("manulEngine.highlightColors")) { return; }
       types.system.dispose(); types.cond.dispose(); types.action.dispose(); types.verify.dispose();
       types = createHuntDecoTypes(readHuntColors());
+      context.subscriptions.push(types.system, types.cond, types.action, types.verify);
       vscode.window.visibleTextEditors.forEach((ed) => refresh(ed));
     }),
   );

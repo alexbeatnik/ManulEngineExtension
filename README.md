@@ -232,11 +232,11 @@ The extension probes in order: custom `manulPath` setting → workspace `.venv/b
 
 ```text
 IF button 'Save' exists:
-        CLICK the 'Save' button
+    CLICK the 'Save' button
 ELIF text 'Error' is present:
-        VERIFY that 'Error' is present
+    VERIFY that 'Error' is present
 ELSE:
-        VERIFY that 'Fallback' is present
+    VERIFY that 'Fallback' is present
 ```
 
 `IF`/`ELIF`/`ELSE` blocks are first-class: syntax highlighting, validation, Step Builder buttons, and autocomplete all support them.
