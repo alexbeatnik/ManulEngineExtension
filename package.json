@@ -262,6 +262,23 @@
     "configuration": {
       "title": "ManulEngine",
       "properties": {
+        "manulEngine.highlightColors": {
+          "type": "object",
+          "default": {
+            "system": "#569CD6",
+            "conditional": "#C586C0",
+            "action": "#DCDCAA",
+            "verify": "#4EC9B0"
+          },
+          "description": "Keyword highlight colors for .hunt files. Keys: system (NAVIGATE, CLICK, …), conditional (IF/ELIF/ELSE), action (Fill, Type, …), verify (VERIFY).",
+          "properties": {
+            "system":      { "type": "string" },
+            "conditional": { "type": "string" },
+            "action":      { "type": "string" },
+            "verify":      { "type": "string" }
+          },
+          "additionalProperties": false
+        },
         "manulEngine.manulPath": {
           "type": "string",
           "default": "",

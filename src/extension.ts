@@ -26,23 +26,31 @@ import { disposeExplainScorePanel } from "./explainScorePanel";
 
 // ── Hunt keyword decoration highlighter ──────────────────────────────────────
 // Bypasses textMateRules / theme limitations by applying VS Code decorations
-// directly. Guarantees 4 distinct keyword colours regardless of colour theme.
+// directly. Colors are configurable via manulEngine.highlightColors setting.
 const VERIFY_RE   = /\b(VERIFY\s+VISUAL|VERIFY\s+SOFTLY|VERIFY\s+that|VERIFY)\b/gi;
 const SYSTEM_RE   = /\b(NAVIGATE\s+to|NAVIGATE|OPEN\s+APP|EXTRACT|SCROLL\s+DOWN|SCROLL|PRESS\s+ENTER|PRESS|RIGHT\s+CLICK|UPLOAD|MOCK\s+(?:GET|POST|PUT|PATCH|DELETE)|WAIT\s+FOR\s+RESPONSE|WAIT\s+FOR|WAIT|DONE|DOUBLE\s+CLICK|CLICK|HOVER|CALL\s+PYTHON|SCAN\s+PAGE|SET|PRINT|DEBUG\s+VARS|DEBUG|PAUSE)\b/gi;
 const COND_RE     = /(?:^|\n)\s*(?:\d+\.\s*)?(IF|ELIF|ELSE)\b/gi;
 const ACTION_RE   = /\b(Fill|Type|Select|Choose|Check|Uncheck|Drag|Drop|Locate|Enter)\b/gi;
 
-function createHuntDecoTypes(): {
+const DEFAULT_COLORS = { system: "#569CD6", conditional: "#C586C0", action: "#DCDCAA", verify: "#4EC9B0" };
+
+function readHuntColors(): typeof DEFAULT_COLORS {
+  const cfg = vscode.workspace.getConfiguration("manulEngine");
+  const user = cfg.get<Record<string, string>>("highlightColors") ?? {};
+  return { ...DEFAULT_COLORS, ...user };
+}
+
+function createHuntDecoTypes(colors: typeof DEFAULT_COLORS): {
   system: vscode.TextEditorDecorationType;
   cond: vscode.TextEditorDecorationType;
   action: vscode.TextEditorDecorationType;
   verify: vscode.TextEditorDecorationType;
 } {
   return {
-    system: vscode.window.createTextEditorDecorationType({ color: "#569CD6" }),
-    cond:   vscode.window.createTextEditorDecorationType({ color: "#C586C0" }),
-    action: vscode.window.createTextEditorDecorationType({ color: "#DCDCAA" }),
-    verify: vscode.window.createTextEditorDecorationType({ color: "#4EC9B0" }),
+    system: vscode.window.createTextEditorDecorationType({ color: colors.system }),
+    cond:   vscode.window.createTextEditorDecorationType({ color: colors.conditional }),
+    action: vscode.window.createTextEditorDecorationType({ color: colors.action }),
+    verify: vscode.window.createTextEditorDecorationType({ color: colors.verify }),
   };
 }
 
@@ -65,11 +73,8 @@ function applyHuntDecorations(
 ): void {
   if (editor.document.languageId !== "hunt") { return; }
   const doc = editor.document;
-  // Verify first (highest priority — its ranges excluded from system)
   const verifyRanges = collectRanges(doc, VERIFY_RE, 1);
   const verifySet = new Set(verifyRanges.map((r) => `${r.start.line}:${r.start.character}`));
-
-  // System keywords — skip positions already claimed by VERIFY
   const systemAll = collectRanges(doc, SYSTEM_RE, 1);
   const systemRanges = systemAll.filter((r) => !verifySet.has(`${r.start.line}:${r.start.character}`));
 
@@ -80,45 +85,36 @@ function applyHuntDecorations(
 }
 
 function registerHuntHighlighter(context: vscode.ExtensionContext): void {
-  const types = createHuntDecoTypes();
+  let types = createHuntDecoTypes(readHuntColors());
   context.subscriptions.push(types.system, types.cond, types.action, types.verify);
 
   const refresh = (editor?: vscode.TextEditor) => {
     if (editor) { applyHuntDecorations(editor, types); }
   };
 
-  // Apply on visible editors
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+
   vscode.window.visibleTextEditors.forEach((e) => refresh(e));
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((e) => refresh(e)),
     vscode.workspace.onDidChangeTextDocument((e) => {
-      const editor = vscode.window.visibleTextEditors.find((ed) => ed.document === e.document);
-      refresh(editor);
+      if (debounceTimer) { clearTimeout(debounceTimer); }
+      debounceTimer = setTimeout(() => {
+        const editor = vscode.window.visibleTextEditors.find((ed) => ed.document === e.document);
+        refresh(editor);
+      }, 100);
+    }),
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (!e.affectsConfiguration("manulEngine.highlightColors")) { return; }
+      types.system.dispose(); types.cond.dispose(); types.action.dispose(); types.verify.dispose();
+      types = createHuntDecoTypes(readHuntColors());
+      vscode.window.visibleTextEditors.forEach((ed) => refresh(ed));
     }),
   );
 }
 
-/** One-time removal of stale textMateRules injected by earlier extension versions. */
-async function cleanupStaleTokenRules(): Promise<void> {
-  const staleScopes = new Set([
-    "keyword.control.hunt", "storage.type.hunt",
-    "keyword.control.conditional.hunt", "entity.name.function.action.hunt",
-    "support.function.verify.hunt",
-  ]);
-  const config = vscode.workspace.getConfiguration("editor");
-  const current: Record<string, unknown> =
-    config.get<Record<string, unknown>>("tokenColorCustomizations") ?? {};
-  const rules: { scope: string }[] =
-    (current as { textMateRules?: { scope: string }[] }).textMateRules ?? [];
-  const kept = rules.filter((r) => !staleScopes.has(r.scope));
-  if (kept.length === rules.length) { return; }
-  const updated = kept.length > 0 ? { ...current, textMateRules: kept } : {};
-  await config.update("tokenColorCustomizations", Object.keys(updated).length > 0 ? updated : undefined, vscode.ConfigurationTarget.Global);
-}
-
 export function activate(context: vscode.ExtensionContext): void {
   registerHuntHighlighter(context);
-  cleanupStaleTokenRules();
   registerDoctorCommand(context);
   // Output channel reused across debug runs from the editor button / context menu.
   const debugOutputChannel = vscode.window.createOutputChannel("ManulEngine Debug");
