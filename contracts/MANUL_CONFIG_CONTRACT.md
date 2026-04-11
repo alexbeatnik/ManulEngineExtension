@@ -1,11 +1,11 @@
 # ManulEngine — Configuration Contract
 
 > **Machine-readable contract for the ManulEngine configuration surface.**
-> Consumed by the VS Code extension config panel, CI/CD integrations, and downstream tooling.
+> Consumed by VS Code extension config panel, Manul Studio, CI/CD integrations, and downstream tooling.
 
 ```json
 {
-  "version": "0.0.9.27",
+  "version": "0.0.9.28",
   "generatedFrom": "manul_engine/prompts.py :: _KEY_MAP, _CFG, get_threshold(), lookup_page_name(); manul_engine/variables.py :: ScopedVariables; manul_engine/helpers.py :: env_bool()",
 
   "configFile": {

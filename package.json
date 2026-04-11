@@ -1,8 +1,8 @@
 {
   "name": "manul-engine",
   "displayName": "ManulEngine",
-  "description": "Deterministic DSL & AI Self-Healing for Playwright. Features Hunt language support, visual StepBuilder, and local LLM integration via Ollama.",
-  "version": "0.0.927",
+  "description": "Write browser automation in plain English. ManulEngine interprets .hunt files through deterministic DOM heuristics on top of Playwright — no selectors, no cloud APIs, no AI required.",
+  "version": "0.0.928",
   "publisher": "manul-engine",
   "icon": "images/icon128.png",
   "repository": {
@@ -31,9 +31,7 @@
   "main": "./out/extension.js",
   "files": [
     "out/**",
-    "demo-tests/**",
     "images/**",
-    "prompts/**",
     "syntaxes/**",
     "language-configuration.json",
     "README.md",
@@ -41,6 +39,36 @@
     "package.json"
   ],
   "contributes": {
+    "configurationDefaults": {
+      "editor.tokenColorCustomizations": {
+        "textMateRules": [
+          {
+            "scope": "storage.type.hunt",
+            "settings": {
+              "foreground": "#569CD6"
+            }
+          },
+          {
+            "scope": "keyword.control.conditional.hunt",
+            "settings": {
+              "foreground": "#C586C0"
+            }
+          },
+          {
+            "scope": "support.function.verify.hunt",
+            "settings": {
+              "foreground": "#4EC9B0"
+            }
+          },
+          {
+            "scope": "entity.name.function.action.hunt",
+            "settings": {
+              "foreground": "#DCDCAA"
+            }
+          }
+        ]
+      }
+    },
     "breakpoints": [
       {
         "language": "hunt"
@@ -128,20 +156,12 @@
         "title": "ManulEngine: Insert [TEARDOWN] Block"
       },
       {
-        "command": "manul.generateDemoTest",
-        "title": "ManulEngine: Add Demo Tests"
-      },
-      {
         "command": "manul.insertInlinePythonCall",
         "title": "ManulEngine: Insert Inline CALL PYTHON Step"
       },
       {
         "command": "manul.generateConfig",
         "title": "ManulEngine: Generate Default Config"
-      },
-      {
-        "command": "manul.addDefaultPrompts",
-        "title": "ManulEngine: Add Default Prompts"
       },
       {
         "command": "manul.clearAllCache",
@@ -242,6 +262,23 @@
     "configuration": {
       "title": "ManulEngine",
       "properties": {
+        "manulEngine.highlightColors": {
+          "type": "object",
+          "default": {
+            "system": "#569CD6",
+            "conditional": "#C586C0",
+            "action": "#DCDCAA",
+            "verify": "#4EC9B0"
+          },
+          "description": "Keyword highlight colors for .hunt files. Keys: system (NAVIGATE, CLICK, …), conditional (IF/ELIF/ELSE), action (Fill, Type, …), verify (VERIFY).",
+          "properties": {
+            "system":      { "type": "string" },
+            "conditional": { "type": "string" },
+            "action":      { "type": "string" },
+            "verify":      { "type": "string" }
+          },
+          "additionalProperties": false
+        },
         "manulEngine.manulPath": {
           "type": "string",
           "default": "",

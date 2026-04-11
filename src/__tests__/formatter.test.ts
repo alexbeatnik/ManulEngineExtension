@@ -131,4 +131,153 @@ describe('HuntDocumentFormatter', () => {
       { range: new vscode.Range(4, 0, 4, 21), newText: '# Outside comment' }
     ])
   })
+
+  it('formats IF/ELIF/ELSE headers at 4 spaces and body lines at 8 spaces', () => {
+    const code = [
+      'STEP 1: Adaptive login',
+      "IF button 'SSO Login' exists:",
+      "CLICK the 'SSO Login' button",
+      "VERIFY that 'SSO Portal' is present",
+      "ELIF text 'Sign In' is present:",
+      "FILL 'Username' field with '{username}'",
+      "CLICK the 'Sign In' button",
+      'ELSE:',
+      "CLICK the 'Create Account' link",
+      'DONE.',
+    ].join('\n')
+
+    const doc = new MockTextDocument(code)
+    const formatter = new HuntDocumentFormatter()
+    const edits = formatter.provideDocumentFormattingEdits(doc as any, {} as any, {} as any)
+
+    // Build the expected formatted document
+    const expected = [
+      'STEP 1: Adaptive login',
+      "    IF button 'SSO Login' exists:",
+      "        CLICK the 'SSO Login' button",
+      "        VERIFY that 'SSO Portal' is present",
+      "    ELIF text 'Sign In' is present:",
+      "        FILL 'Username' field with '{username}'",
+      "        CLICK the 'Sign In' button",
+      '    ELSE:',
+      "        CLICK the 'Create Account' link",
+      'DONE.',
+    ]
+
+    // Apply edits to get the result
+    const lines = code.split('\n')
+    for (const edit of edits) {
+      lines[(edit.range as any).startLine] = edit.newText
+    }
+    expect(lines).toEqual(expected)
+  })
+
+  it('resets conditional indent when action lines return to block level', () => {
+    // Pre-formatted input: action line after ELSE body is at 4-space indent
+    const code = [
+      'STEP 1: Mixed',
+      "    IF button 'X' exists:",
+      "        CLICK the 'X' button",
+      "    ELSE:",
+      "        CLICK the 'Y' button",
+      "    VERIFY that 'Done' is present",
+      'DONE.',
+    ].join('\n')
+
+    const doc = new MockTextDocument(code)
+    const formatter = new HuntDocumentFormatter()
+    const edits = formatter.provideDocumentFormattingEdits(doc as any, {} as any, {} as any)
+
+    const expected = [
+      'STEP 1: Mixed',
+      "    IF button 'X' exists:",
+      "        CLICK the 'X' button",
+      '    ELSE:',
+      "        CLICK the 'Y' button",
+      "    VERIFY that 'Done' is present",
+      'DONE.',
+    ]
+
+    const lines = code.split('\n')
+    for (const edit of edits) {
+      lines[(edit.range as any).startLine] = edit.newText
+    }
+    expect(lines).toEqual(expected)
+  })
+
+  it('formats nested IF blocks with increasing indent levels', () => {
+    // Pre-formatted nested conditional input
+    const code = [
+      'STEP 1: Nested',
+      "    IF 'x' is present:",
+      "        CLICK 'x'",
+      "        IF 'y' is present:",
+      "            CLICK 'y'",
+      "        ELSE:",
+      "            CLICK 'z'",
+      "        CLICK 'after inner'",
+      "    ELIF 'w' is present:",
+      "        CLICK 'w'",
+      "    CLICK 'after all'",
+      'DONE.',
+    ].join('\n')
+
+    const doc = new MockTextDocument(code)
+    const formatter = new HuntDocumentFormatter()
+    const edits = formatter.provideDocumentFormattingEdits(doc as any, {} as any, {} as any)
+
+    const expected = [
+      'STEP 1: Nested',
+      "    IF 'x' is present:",
+      "        CLICK 'x'",
+      "        IF 'y' is present:",
+      "            CLICK 'y'",
+      "        ELSE:",
+      "            CLICK 'z'",
+      "        CLICK 'after inner'",
+      "    ELIF 'w' is present:",
+      "        CLICK 'w'",
+      "    CLICK 'after all'",
+      'DONE.',
+    ]
+
+    const lines = code.split('\n')
+    for (const edit of edits) {
+      lines[(edit.range as any).startLine] = edit.newText
+    }
+    expect(lines).toEqual(expected)
+  })
+
+  it('formats unformatted flat IF/ELIF/ELSE correctly', () => {
+    // Completely unformatted input (all at indent 0)
+    const code = [
+      'STEP 1: Test',
+      "IF 'x' is present:",
+      "CLICK 'x'",
+      "ELSE:",
+      "CLICK 'y'",
+      "CLICK 'done'",
+      'DONE.',
+    ].join('\n')
+
+    const doc = new MockTextDocument(code)
+    const formatter = new HuntDocumentFormatter()
+    const edits = formatter.provideDocumentFormattingEdits(doc as any, {} as any, {} as any)
+
+    const expected = [
+      'STEP 1: Test',
+      "    IF 'x' is present:",
+      "        CLICK 'x'",
+      '    ELSE:',
+      "        CLICK 'y'",
+      "        CLICK 'done'",
+      'DONE.',
+    ]
+
+    const lines = code.split('\n')
+    for (const edit of edits) {
+      lines[(edit.range as any).startLine] = edit.newText
+    }
+    expect(lines).toEqual(expected)
+  })
 })

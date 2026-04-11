@@ -1,11 +1,11 @@
 # ManulEngine — CLI Contract
 
 > **Machine-readable contract for the `manul` CLI interface.**
-> Consumed by the VS Code extension, CI/CD integrations, and other downstream tooling.
+> Consumed by Manul Studio, VS Code extension, CI/CD integrations, and other downstream tooling.
 
 ```json
 {
-  "version": "0.0.9.27",
+  "version": "0.0.9.28",
   "generatedFrom": "manul_engine/cli.py :: main(), _run_hunt_file(), parse_hunt_file(), sync_main(); manul_engine/prompts.py :: _KEY_MAP, global config constants; manul_engine/scanner.py :: scan_main(); manul_engine/recorder.py :: record_main(); manul_engine/scheduler.py :: daemon_main(); manul_engine/packager.py :: pack(), install()",
   "entryPoints": {
     "console_script": "manul",

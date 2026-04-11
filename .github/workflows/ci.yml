@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - 0.0.9.27
+      - 0.0.9.28
   workflow_dispatch:
 
 permissions:

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: Tag to create, for example v0.0.9.27
+        description: Tag to create, for example v0.0.9.28
         required: true
         type: string
 

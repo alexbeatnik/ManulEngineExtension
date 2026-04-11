@@ -29,8 +29,6 @@ const TEARDOWN_SCAFFOLD = `[TEARDOWN]
     CALL PYTHON module_name.function_name
 [END TEARDOWN]`;
 
-const DEMO_TEST_FILENAMES = ["demoqa.hunt", "mega.hunt", "rahul.hunt", "saucedemo.hunt"] as const;
-
 // STEP_TEMPLATES removed — buttons are now generated from the extension-local MANUL_DSL_COMMANDS registry.
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -57,8 +55,6 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
         await vscode.commands.executeCommand("manul.insertSetup");
       } else if (msg.command === "insertTeardown") {
         await vscode.commands.executeCommand("manul.insertTeardown");
-      } else if (msg.command === "generateDemoTest") {
-        await vscode.commands.executeCommand("manul.generateDemoTest");
       } else if (msg.command === "runLiveScan") {
         await runLiveScanCommand(msg.url ?? "");
       } else if (msg.command === "recordSession") {
@@ -74,10 +70,18 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
 
     // Generate buttons from the shared DSL contract — single source of truth.
     // Markup uses icon span + label span + inline tooltip.
+    // Snippets are stored in a JS map (not HTML attributes) to preserve multi-line content.
+    const snippetMap: Record<string, string> = {};
     const buttons = MANUL_DSL_COMMANDS.map(
-      (cmd) =>
-        `<div class="sb-tooltip-wrap" data-cmd-id="${cmd.id}">
-          <button class="sb-list-btn" data-template="${escapeHtml(cmd.snippet)}">
+      (cmd) => {
+        snippetMap[cmd.id] = cmd.snippet;
+        const hintRow = cmd.hintNote
+          ? `<div class="sb-step-tooltip-row sb-step-tooltip-hint">
+              <span class="sb-step-tooltip-value">\ud83d\udca1 ${escapeHtml(cmd.hintNote)}</span>
+            </div>`
+          : '';
+        return `<div class="sb-tooltip-wrap" data-cmd-id="${cmd.id}">
+          <button class="sb-list-btn" data-cmd-id="${cmd.id}">
             <span class="sb-list-icon">${cmd.icon}</span>
             <span class="sb-list-label">${cmd.label}</span>
           </button>
@@ -90,9 +94,10 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
             <div class="sb-step-tooltip-row">
               <span class="sb-step-tooltip-key">Example</span>
               <code class="sb-step-tooltip-code">${escapeHtml(cmd.example)}</code>
-            </div>
+            </div>${hintRow}
           </div>
-        </div>`
+        </div>`;
+      }
     ).join("\n");
 
     return `<!DOCTYPE html>
@@ -272,6 +277,15 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
     white-space: pre-wrap; word-break: break-word;
     font-size: 11px; line-height: 1.4;
   }
+  .sb-step-tooltip-hint {
+    margin-top: 8px; padding: 6px 8px; border-radius: 6px;
+    background: var(--vscode-textBlockQuote-background, rgba(255, 193, 7, 0.08));
+    border-left: 3px solid var(--vscode-textBlockQuote-border, #e2b340);
+  }
+  .sb-step-tooltip-hint .sb-step-tooltip-value {
+    font-size: 11px; font-style: italic;
+    color: var(--vscode-descriptionForeground);
+  }
 </style>
 </head>
 <body>
@@ -289,9 +303,6 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
     </button>
     <button class="sb-list-btn" id="btn-insert-teardown">
       <span class="sb-list-icon">🧹</span><span class="sb-list-label">Insert [TEARDOWN] block</span>
-    </button>
-    <button class="sb-list-btn" id="btn-generate-demo">
-      <span class="sb-list-icon">🔄</span><span class="sb-list-label">Add Demo Tests</span>
     </button>
   </div>
 
@@ -539,9 +550,6 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
     document.getElementById('btn-insert-teardown').addEventListener('click', function() {
       vsc.postMessage({ command: 'insertTeardown' });
     });
-    document.getElementById('btn-generate-demo').addEventListener('click', function() {
-      vsc.postMessage({ command: 'generateDemoTest' });
-    });
 
     document.querySelectorAll('.sb-builder-toggle').forEach(function(button) {
       button.addEventListener('click', function() {
@@ -576,9 +584,11 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
     });
 
     /* ── DSL step buttons ───────────────────────────────────────── */
-    document.querySelectorAll('.sb-list-btn[data-template]').forEach(function(btn) {
+    var SNIPPET_MAP = ${JSON.stringify(snippetMap).replace(/<\//g, '<\\/')};
+    document.querySelectorAll('.sb-list-btn[data-cmd-id]').forEach(function(btn) {
       btn.addEventListener('click', function() {
-        vsc.postMessage({ command: 'insertStep', template: btn.dataset.template });
+        var template = SNIPPET_MAP[btn.dataset.cmdId];
+        if (template) { vsc.postMessage({ command: 'insertStep', template: template }); }
       });
     });
 
@@ -769,61 +779,6 @@ export async function insertTeardownCommand(): Promise<void> {
  */
 export async function insertInlinePythonCallCommand(): Promise<void> {
   await insertStep('CALL PYTHON ${1:module}.${2:function}${3: with args: "${4:arg}"}${5: into {${6:result}}}');
-}
-
-/** Insert a minimal runnable demo `.hunt` scaffold at the start of the cursor's line. */
-export async function generateDemoTestCommand(context: vscode.ExtensionContext): Promise<void> {
-  const folders = vscode.workspace.workspaceFolders;
-  if (!folders || folders.length === 0) {
-    vscode.window.showErrorMessage("No workspace folder open.");
-    return;
-  }
-
-  const workspaceRoot = folders[0].uri.fsPath;
-  const testsDir = getTestsHomeDir(workspaceRoot);
-  const bundledDemoDir = path.join(context.extensionPath, "demo-tests");
-
-  if (!fs.existsSync(bundledDemoDir)) {
-    vscode.window.showErrorMessage("ManulEngine: bundled demo tests are missing from the extension package.");
-    return;
-  }
-
-  fs.mkdirSync(testsDir, { recursive: true });
-
-  const createdFiles: string[] = [];
-  const skippedFiles: string[] = [];
-
-  for (const fileName of DEMO_TEST_FILENAMES) {
-    const srcPath = path.join(bundledDemoDir, fileName);
-    const destPath = path.join(testsDir, fileName);
-    if (!fs.existsSync(srcPath)) {
-      continue;
-    }
-    if (fs.existsSync(destPath)) {
-      skippedFiles.push(fileName);
-      continue;
-    }
-
-    fs.copyFileSync(srcPath, destPath);
-    createdFiles.push(destPath);
-  }
-
-  if (createdFiles.length === 0) {
-    const suffix = skippedFiles.length > 0
-      ? ` Existing files were kept: ${skippedFiles.join(", ")}.`
-      : "";
-    vscode.window.showInformationMessage(`ManulEngine: demo tests already exist in ${testsDir}.${suffix}`);
-    return;
-  }
-
-  const firstDoc = await vscode.workspace.openTextDocument(createdFiles[0]);
-  await vscode.window.showTextDocument(firstDoc);
-
-  const summary = [
-    `Added ${createdFiles.length} demo test${createdFiles.length === 1 ? "" : "s"} to ${testsDir}.`,
-    skippedFiles.length > 0 ? `Skipped existing: ${skippedFiles.join(", ")}.` : "",
-  ].filter(Boolean).join(" ");
-  vscode.window.showInformationMessage(`ManulEngine: ${summary}`);
 }
 
 /**
