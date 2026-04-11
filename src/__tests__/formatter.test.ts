@@ -171,4 +171,37 @@ describe('HuntDocumentFormatter', () => {
     }
     expect(lines).toEqual(expected)
   })
+
+  it('resets conditional indent when action lines return to block level', () => {
+    // Pre-formatted input: action line after ELSE body is at 4-space indent
+    const code = [
+      'STEP 1: Mixed',
+      "    IF button 'X' exists:",
+      "        CLICK the 'X' button",
+      "    ELSE:",
+      "        CLICK the 'Y' button",
+      "    VERIFY that 'Done' is present",
+      'DONE.',
+    ].join('\n')
+
+    const doc = new MockTextDocument(code)
+    const formatter = new HuntDocumentFormatter()
+    const edits = formatter.provideDocumentFormattingEdits(doc as any, {} as any, {} as any)
+
+    const expected = [
+      'STEP 1: Mixed',
+      "    IF button 'X' exists:",
+      "        CLICK the 'X' button",
+      '    ELSE:',
+      "        CLICK the 'Y' button",
+      "    VERIFY that 'Done' is present",
+      'DONE.',
+    ]
+
+    const lines = code.split('\n')
+    for (const edit of edits) {
+      lines[(edit.range as any).startLine] = edit.newText
+    }
+    expect(lines).toEqual(expected)
+  })
 })

@@ -70,15 +70,18 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
 
     // Generate buttons from the shared DSL contract — single source of truth.
     // Markup uses icon span + label span + inline tooltip.
+    // Snippets are stored in a JS map (not HTML attributes) to preserve multi-line content.
+    const snippetMap: Record<string, string> = {};
     const buttons = MANUL_DSL_COMMANDS.map(
       (cmd) => {
+        snippetMap[cmd.id] = cmd.snippet;
         const hintRow = cmd.hintNote
           ? `<div class="sb-step-tooltip-row sb-step-tooltip-hint">
               <span class="sb-step-tooltip-value">\ud83d\udca1 ${escapeHtml(cmd.hintNote)}</span>
             </div>`
           : '';
         return `<div class="sb-tooltip-wrap" data-cmd-id="${cmd.id}">
-          <button class="sb-list-btn" data-template="${escapeHtml(cmd.snippet)}">
+          <button class="sb-list-btn" data-cmd-id="${cmd.id}">
             <span class="sb-list-icon">${cmd.icon}</span>
             <span class="sb-list-label">${cmd.label}</span>
           </button>
@@ -581,9 +584,11 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
     });
 
     /* ── DSL step buttons ───────────────────────────────────────── */
-    document.querySelectorAll('.sb-list-btn[data-template]').forEach(function(btn) {
+    var SNIPPET_MAP = ${JSON.stringify(snippetMap)};
+    document.querySelectorAll('.sb-list-btn[data-cmd-id]').forEach(function(btn) {
       btn.addEventListener('click', function() {
-        vsc.postMessage({ command: 'insertStep', template: btn.dataset.template });
+        var template = SNIPPET_MAP[btn.dataset.cmdId];
+        if (template) { vsc.postMessage({ command: 'insertStep', template: template }); }
       });
     });
 

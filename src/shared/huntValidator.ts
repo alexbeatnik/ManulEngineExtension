@@ -458,6 +458,15 @@ export function validateHuntDocument(content: string): HuntValidationDiagnostic[
       }
     }
 
+    // ── Pop stale conditional frames ────────────────────────────────────
+    // Any non-empty, non-branch line at indent <= a conditional header's
+    // indent means that conditional scope has ended.
+    if (!hookState) {
+      while (conditionalStack.length > 0 && conditionalStack[conditionalStack.length - 1].indent >= indent) {
+        conditionalStack.pop()
+      }
+    }
+
     if (!isValidHuntActionLine(line, { insideHookBlock: Boolean(hookState) })) {
       diagnostics.push(
         makeDiagnostic(

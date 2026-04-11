@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { RE_STEP, RE_DONE, RE_HOOK_OPEN, RE_HOOK_CLOSE, RE_COMMENT, RE_IF, RE_ELIF, RE_ELSE } from "./constants";
+import { RE_STEP, RE_DONE, RE_HOOK_OPEN, RE_HOOK_CLOSE, RE_IF, RE_ELIF, RE_ELSE } from "./constants";
 
 /**
  * Document formatter for .hunt DSL files.
@@ -24,7 +24,7 @@ export class HuntDocumentFormatter implements vscode.DocumentFormattingEditProvi
   ): vscode.TextEdit[] {
     const edits: vscode.TextEdit[] = [];
     let insideBlock = false; // true when inside a STEP group or hook block
-    let insideConditional = false; // true when inside an IF/ELIF/ELSE body
+    let conditionalHeaderIndent = -1; // indent column of the active IF/ELIF/ELSE header, -1 = none
 
     for (let i = 0; i < document.lineCount; i++) {
       const line = document.lineAt(i);
@@ -49,34 +49,41 @@ export class HuntDocumentFormatter implements vscode.DocumentFormattingEditProvi
       } else if (RE_STEP.test(stripped)) {
         // STEP 1: Label  or  STEP: Label
         insideBlock = true;
-        insideConditional = false;
+        conditionalHeaderIndent = -1;
         desired = stripped;
       } else if (RE_DONE.test(stripped)) {
         insideBlock = false;
-        insideConditional = false;
+        conditionalHeaderIndent = -1;
         desired = stripped;
       } else if (RE_HOOK_OPEN.test(stripped)) {
         // [SETUP] / [TEARDOWN]
         insideBlock = true;
-        insideConditional = false;
+        conditionalHeaderIndent = -1;
         desired = stripped;
       } else if (RE_HOOK_CLOSE.test(stripped)) {
         // [END SETUP] / [END TEARDOWN]
         insideBlock = false;
-        insideConditional = false;
+        conditionalHeaderIndent = -1;
         desired = stripped;
       } else if (RE_IF.test(stripped) || RE_ELIF.test(stripped) || RE_ELSE.test(stripped)) {
-        // IF/ELIF/ELSE headers — same indent level as action lines
-        insideConditional = true;
+        // IF/ELIF/ELSE headers — same indent level as action lines (4 spaces inside a block)
+        const headerIndent = insideBlock ? INDENT.length : 0;
+        conditionalHeaderIndent = headerIndent;
         desired = insideBlock ? INDENT + stripped : stripped;
-      } else if (RE_COMMENT.test(stripped)) {
-        // Comments: double-indent inside conditionals, single inside blocks
-        desired = insideConditional ? DOUBLE_INDENT + stripped
-          : insideBlock ? INDENT + stripped
-          : stripped;
       } else {
-        // ── Action lines — double-indent inside conditionals ─────────
-        desired = insideConditional ? DOUBLE_INDENT + stripped
+        // ── Action / comment lines ───────────────────────────────────
+        // Detect whether we've left the conditional body: a line whose
+        // *original* indent is at or below the header indent is a sibling,
+        // not a body child.  Skip the check when origIndent is 0 because
+        // that often means the file is completely unformatted.
+        if (conditionalHeaderIndent >= 0) {
+          const origIndent = raw.length - raw.trimStart().length;
+          if (origIndent > 0 && origIndent <= conditionalHeaderIndent) {
+            conditionalHeaderIndent = -1;
+          }
+        }
+        desired = conditionalHeaderIndent >= 0
+          ? DOUBLE_INDENT + stripped
           : insideBlock ? INDENT + stripped
           : stripped;
       }
