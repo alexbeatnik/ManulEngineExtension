@@ -498,4 +498,34 @@ describe('validateHuntDocument', () => {
     expect(diagnostics.length).toBeGreaterThanOrEqual(1)
     expect(diagnostics.some(d => d.code === 'invalid-hook-block')).toBe(true)
   })
+
+  it('resets conditional state across STEP boundaries', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: first step',
+      "    IF button 'Save' exists:",
+      "        CLICK the 'Save' button",
+      'STEP 2: second step',
+      "    ELIF text 'Error' is present:",
+      "        VERIFY that 'Error' is present",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('orphaned-branch')
+    expect(diagnostics[0].line).toBe(5)
+  })
+
+  it('resets conditional state at DONE', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: only step',
+      "    IF button 'Save' exists:",
+      "        CLICK the 'Save' button",
+      'DONE.',
+      "ELSE:",
+      "    VERIFY that 'Fallback' is present",
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('orphaned-branch')
+  })
 })

@@ -358,7 +358,12 @@ export function validateHuntDocument(content: string): HuntValidationDiagnostic[
     const line = lines[index]
     const trimmed = line.trim()
 
-    if (!trimmed || RE_COMMENT.test(line) || RE_METADATA.test(line) || RE_STEP.test(line) || RE_DONE.test(line)) {
+    if (!trimmed || RE_COMMENT.test(line) || RE_METADATA.test(line)) {
+      continue
+    }
+
+    if (RE_STEP.test(line) || RE_DONE.test(line)) {
+      conditionalStack.length = 0
       continue
     }
 
