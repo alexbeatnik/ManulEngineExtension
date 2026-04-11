@@ -71,8 +71,13 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
     // Generate buttons from the shared DSL contract — single source of truth.
     // Markup uses icon span + label span + inline tooltip.
     const buttons = MANUL_DSL_COMMANDS.map(
-      (cmd) =>
-        `<div class="sb-tooltip-wrap" data-cmd-id="${cmd.id}">
+      (cmd) => {
+        const hintRow = cmd.hintNote
+          ? `<div class="sb-step-tooltip-row sb-step-tooltip-hint">
+              <span class="sb-step-tooltip-value">\ud83d\udca1 ${escapeHtml(cmd.hintNote)}</span>
+            </div>`
+          : '';
+        return `<div class="sb-tooltip-wrap" data-cmd-id="${cmd.id}">
           <button class="sb-list-btn" data-template="${escapeHtml(cmd.snippet)}">
             <span class="sb-list-icon">${cmd.icon}</span>
             <span class="sb-list-label">${cmd.label}</span>
@@ -86,9 +91,10 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
             <div class="sb-step-tooltip-row">
               <span class="sb-step-tooltip-key">Example</span>
               <code class="sb-step-tooltip-code">${escapeHtml(cmd.example)}</code>
-            </div>
+            </div>${hintRow}
           </div>
-        </div>`
+        </div>`;
+      }
     ).join("\n");
 
     return `<!DOCTYPE html>
@@ -267,6 +273,15 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
     color: var(--vscode-foreground);
     white-space: pre-wrap; word-break: break-word;
     font-size: 11px; line-height: 1.4;
+  }
+  .sb-step-tooltip-hint {
+    margin-top: 8px; padding: 6px 8px; border-radius: 6px;
+    background: var(--vscode-textBlockQuote-background, rgba(255, 193, 7, 0.08));
+    border-left: 3px solid var(--vscode-textBlockQuote-border, #e2b340);
+  }
+  .sb-step-tooltip-hint .sb-step-tooltip-value {
+    font-size: 11px; font-style: italic;
+    color: var(--vscode-descriptionForeground);
   }
 </style>
 </head>

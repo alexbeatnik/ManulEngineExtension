@@ -341,4 +341,148 @@ describe('validateHuntDocument', () => {
     expect(diagnostics).toHaveLength(1)
     expect(diagnostics[0].code).toBe('invalid-command')
   })
+
+  it('accepts well-formed IF/ELIF/ELSE blocks without diagnostics', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: Conditional',
+      "    IF button 'Save' exists:",
+      "        CLICK the 'Save' button",
+      "    ELIF text 'Error' is present:",
+      "        VERIFY that 'Error' is present",
+      '    ELSE:',
+      "        VERIFY that 'Fallback' is present",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toEqual([])
+  })
+
+  it('reports IF missing trailing colon', () => {
+    const diagnostics = validateHuntDocument([
+      "IF button 'Save' exists",
+      "    CLICK the 'Save' button",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('invalid-conditional')
+    expect(diagnostics[0].message).toContain('must end with a colon')
+  })
+
+  it('reports ELIF missing trailing colon', () => {
+    const diagnostics = validateHuntDocument([
+      "IF button 'Save' exists:",
+      "    CLICK the 'Save' button",
+      "ELIF text 'Error' is present",
+      "    VERIFY that 'Error' is present",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('invalid-conditional')
+  })
+
+  it('reports malformed ELSE with extra text', () => {
+    const diagnostics = validateHuntDocument([
+      "IF button 'Save' exists:",
+      "    CLICK the 'Save' button",
+      'ELSE something',
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('invalid-conditional')
+    expect(diagnostics[0].message).toContain('ELSE')
+  })
+
+  it('reports orphaned ELIF without preceding IF', () => {
+    const diagnostics = validateHuntDocument([
+      "ELIF text 'Error' is present:",
+      "    VERIFY that 'Error' is present",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('orphaned-branch')
+    expect(diagnostics[0].message).toContain('ELIF must follow')
+  })
+
+  it('reports orphaned ELSE without preceding IF', () => {
+    const diagnostics = validateHuntDocument([
+      'ELSE:',
+      "    VERIFY that 'Fallback' is present",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('orphaned-branch')
+    expect(diagnostics[0].message).toContain('ELSE must follow')
+  })
+
+  it('reports ELIF after ELSE', () => {
+    const diagnostics = validateHuntDocument([
+      "IF button 'X' exists:",
+      "    CLICK the 'X' button",
+      'ELSE:',
+      "    VERIFY that 'a' is present",
+      "ELIF text 'b' is present:",
+      "    VERIFY that 'b' is present",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('orphaned-branch')
+  })
+
+  it('reports duplicate ELSE in the same block', () => {
+    const diagnostics = validateHuntDocument([
+      "IF button 'X' exists:",
+      "    CLICK the 'X' button",
+      'ELSE:',
+      "    VERIFY that 'a' is present",
+      'ELSE:',
+      "    VERIFY that 'b' is present",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('orphaned-branch')
+  })
+
+  it('handles nested IF/ELIF/ELSE without false positives', () => {
+    const diagnostics = validateHuntDocument([
+      "STEP 1: nested conditionals",
+      "    IF button 'Save' exists:",
+      "        CLICK the 'Save' button",
+      "        IF text 'Are you sure?' is present:",
+      "            CLICK the 'Confirm' button",
+      "        ELSE:",
+      "            VERIFY that 'Saved' is present",
+      "    ELIF button 'Submit' exists:",
+      "        CLICK the 'Submit' button",
+      "    ELSE:",
+      "        VERIFY that 'No action' is present",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(0)
+  })
+
+  it('detects orphaned ELIF in nested block', () => {
+    const diagnostics = validateHuntDocument([
+      "STEP 1: nested orphan",
+      "    IF button 'A' exists:",
+      "        IF text 'B' is present:",
+      "            CLICK the 'B' button",
+      "        ELSE:",
+      "            VERIFY that 'C' is present",
+      "        ELIF text 'D' is present:",
+      "            VERIFY that 'D' is present",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('orphaned-branch')
+    expect(diagnostics[0].line).toBe(7)
+  })
 })

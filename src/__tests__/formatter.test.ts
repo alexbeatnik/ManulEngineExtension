@@ -131,4 +131,44 @@ describe('HuntDocumentFormatter', () => {
       { range: new vscode.Range(4, 0, 4, 21), newText: '# Outside comment' }
     ])
   })
+
+  it('formats IF/ELIF/ELSE headers at 4 spaces and body lines at 8 spaces', () => {
+    const code = [
+      'STEP 1: Adaptive login',
+      "IF button 'SSO Login' exists:",
+      "CLICK the 'SSO Login' button",
+      "VERIFY that 'SSO Portal' is present",
+      "ELIF text 'Sign In' is present:",
+      "FILL 'Username' field with '{username}'",
+      "CLICK the 'Sign In' button",
+      'ELSE:',
+      "CLICK the 'Create Account' link",
+      'DONE.',
+    ].join('\n')
+
+    const doc = new MockTextDocument(code)
+    const formatter = new HuntDocumentFormatter()
+    const edits = formatter.provideDocumentFormattingEdits(doc as any, {} as any, {} as any)
+
+    // Build the expected formatted document
+    const expected = [
+      'STEP 1: Adaptive login',
+      "    IF button 'SSO Login' exists:",
+      "        CLICK the 'SSO Login' button",
+      "        VERIFY that 'SSO Portal' is present",
+      "    ELIF text 'Sign In' is present:",
+      "        FILL 'Username' field with '{username}'",
+      "        CLICK the 'Sign In' button",
+      '    ELSE:',
+      "        CLICK the 'Create Account' link",
+      'DONE.',
+    ]
+
+    // Apply edits to get the result
+    const lines = code.split('\n')
+    for (const edit of edits) {
+      lines[(edit.range as any).startLine] = edit.newText
+    }
+    expect(lines).toEqual(expected)
+  })
 })

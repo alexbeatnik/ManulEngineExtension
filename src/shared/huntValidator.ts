@@ -8,6 +8,8 @@ export type HuntValidationDiagnosticCode =
   | 'invalid-hook-block'
   | 'hook-mismatch'
   | 'unclosed-hook-block'
+  | 'invalid-conditional'
+  | 'orphaned-branch'
 
 export interface HuntValidationDiagnostic {
   line: number
@@ -94,6 +96,11 @@ export const RE_COMMENT = new RegExp(`^\\s*${escapeRegExp(MANUL_DSL_CONTRACT.com
 export const RE_IF = /^\s*(?:\d+\.\s*)?IF\b.+:\s*$/i
 export const RE_ELIF = /^\s*(?:\d+\.\s*)?ELIF\b.+:\s*$/i
 export const RE_ELSE = /^\s*(?:\d+\.\s*)?ELSE\s*:\s*$/i
+
+/** Matches IF/ELIF without trailing colon — used for helpful diagnostics. */
+const RE_IF_NO_COLON = /^\s*(?:\d+\.\s*)?IF\b.+[^:\s]\s*$/i
+const RE_ELIF_NO_COLON = /^\s*(?:\d+\.\s*)?ELIF\b.+[^:\s]\s*$/i
+const RE_ELSE_MALFORMED = /^\s*(?:\d+\.\s*)?ELSE\b(?!\s*:).*/i
 
 function countQuotedFragments(line: string): number {
   return line.match(QUOTED_FRAGMENT_RE)?.length ?? 0
@@ -305,21 +312,113 @@ function makeDiagnostic(
   }
 }
 
+type ConditionalState = 'if' | 'elif' | 'else'
+type ConditionalFrame = { state: ConditionalState; indent: number }
+
+function indentLevel(line: string): number {
+  const match = line.match(/^(\s*)/)
+  return match ? match[1].length : 0
+}
+
 export function validateHuntDocument(content: string): HuntValidationDiagnostic[] {
   const diagnostics: HuntValidationDiagnostic[] = []
   const lines = content.split(/\r?\n/)
   let hookState: HookBlockState | null = null
+  const conditionalStack: ConditionalFrame[] = []
+
+  function currentConditional(indent: number): ConditionalFrame | null {
+    for (let i = conditionalStack.length - 1; i >= 0; i--) {
+      if (conditionalStack[i].indent === indent) {
+        return conditionalStack[i]
+      }
+      if (conditionalStack[i].indent < indent) {
+        return null
+      }
+    }
+    return null
+  }
+
+  function setConditional(indent: number, state: ConditionalState): void {
+    // Remove any frames with indent >= current (they were deeper nested blocks that ended)
+    while (conditionalStack.length > 0 && conditionalStack[conditionalStack.length - 1].indent > indent) {
+      conditionalStack.pop()
+    }
+    const existing = conditionalStack.length > 0 && conditionalStack[conditionalStack.length - 1].indent === indent
+      ? conditionalStack[conditionalStack.length - 1]
+      : null
+    if (existing) {
+      existing.state = state
+    } else {
+      conditionalStack.push({ state, indent })
+    }
+  }
 
   for (let index = 0; index < lines.length; index += 1) {
     const lineNumber = index + 1
     const line = lines[index]
     const trimmed = line.trim()
 
-    if (!trimmed || RE_COMMENT.test(line) || RE_METADATA.test(line) || RE_STEP.test(line) || RE_DONE.test(line) || RE_IF.test(line) || RE_ELIF.test(line) || RE_ELSE.test(line)) {
+    if (!trimmed || RE_COMMENT.test(line) || RE_METADATA.test(line) || RE_STEP.test(line) || RE_DONE.test(line)) {
+      continue
+    }
+
+    const indent = indentLevel(line)
+
+    // ── Well-formed IF/ELIF/ELSE — validate structural ordering ──────────
+    if (RE_IF.test(line)) {
+      setConditional(indent, 'if')
+      continue
+    }
+
+    if (RE_ELIF.test(line)) {
+      const frame = currentConditional(indent)
+      if (!frame || frame.state === 'else') {
+        diagnostics.push(
+          makeDiagnostic(lineNumber, line, 'ELIF must follow an IF or another ELIF block.', 'orphaned-branch'),
+        )
+      }
+      setConditional(indent, 'elif')
+      continue
+    }
+
+    if (RE_ELSE.test(line)) {
+      const frame = currentConditional(indent)
+      if (!frame || frame.state === 'else') {
+        diagnostics.push(
+          makeDiagnostic(lineNumber, line, 'ELSE must follow an IF or ELIF block.', 'orphaned-branch'),
+        )
+      }
+      setConditional(indent, 'else')
+      continue
+    }
+
+    // ── Malformed conditionals — missing colon ──────────────────────────
+    if (RE_IF_NO_COLON.test(line)) {
+      diagnostics.push(
+        makeDiagnostic(lineNumber, line, 'IF condition must end with a colon. Example: IF button \'Save\' exists:', 'invalid-conditional'),
+      )
+      setConditional(indent, 'if')
+      continue
+    }
+
+    if (RE_ELIF_NO_COLON.test(line)) {
+      diagnostics.push(
+        makeDiagnostic(lineNumber, line, 'ELIF condition must end with a colon. Example: ELIF text \'Error\' is present:', 'invalid-conditional'),
+      )
+      setConditional(indent, 'elif')
+      continue
+    }
+
+    if (RE_ELSE_MALFORMED.test(line)) {
+      diagnostics.push(
+        makeDiagnostic(lineNumber, line, 'ELSE must be followed by a colon and nothing else. Example: ELSE:', 'invalid-conditional'),
+      )
+      setConditional(indent, 'else')
       continue
     }
 
     if (RE_HOOK_OPEN.test(line)) {
+      conditionalStack.length = 0
       if (hookState) {
         diagnostics.push(
           makeDiagnostic(lineNumber, line, 'Nested hook blocks are not supported.', 'invalid-hook-block'),
@@ -335,6 +434,7 @@ export function validateHuntDocument(content: string): HuntValidationDiagnostic[
     }
 
     if (RE_HOOK_CLOSE.test(line)) {
+      conditionalStack.length = 0
       if (!hookState) {
         diagnostics.push(
           makeDiagnostic(lineNumber, line, 'Hook block closing tag does not match any open hook block.', 'hook-mismatch'),

@@ -372,9 +372,13 @@ function buildDslCompletionItems(linePrefix = ""): vscode.CompletionItem[] {
     ...MANUL_DSL_COMMANDS.map((cmd, idx) => {
       const item = new vscode.CompletionItem(cmd.label, vscode.CompletionItemKind.Snippet);
       item.insertText = new vscode.SnippetString(cmd.snippet);
-      item.documentation = new vscode.MarkdownString(
-        `${cmd.description}\n\n**Example:** \`${cmd.example}\``
-      );
+      const md = new vscode.MarkdownString();
+      md.appendMarkdown(`${cmd.description}\n\n`);
+      if (cmd.hintNote) {
+        md.appendMarkdown(`> 💡 ${cmd.hintNote}\n\n`);
+      }
+      md.appendMarkdown(`**Example**\n\n\`\`\`text\n${cmd.example}\n\`\`\``);
+      item.documentation = md;
       item.detail = cmd.example;
       item.sortText = `3_dsl_${String(idx).padStart(2, "0")}`;
       return item;
