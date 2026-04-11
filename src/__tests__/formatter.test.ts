@@ -204,4 +204,80 @@ describe('HuntDocumentFormatter', () => {
     }
     expect(lines).toEqual(expected)
   })
+
+  it('formats nested IF blocks with increasing indent levels', () => {
+    // Pre-formatted nested conditional input
+    const code = [
+      'STEP 1: Nested',
+      "    IF 'x' is present:",
+      "        CLICK 'x'",
+      "        IF 'y' is present:",
+      "            CLICK 'y'",
+      "        ELSE:",
+      "            CLICK 'z'",
+      "        CLICK 'after inner'",
+      "    ELIF 'w' is present:",
+      "        CLICK 'w'",
+      "    CLICK 'after all'",
+      'DONE.',
+    ].join('\n')
+
+    const doc = new MockTextDocument(code)
+    const formatter = new HuntDocumentFormatter()
+    const edits = formatter.provideDocumentFormattingEdits(doc as any, {} as any, {} as any)
+
+    const expected = [
+      'STEP 1: Nested',
+      "    IF 'x' is present:",
+      "        CLICK 'x'",
+      "        IF 'y' is present:",
+      "            CLICK 'y'",
+      "        ELSE:",
+      "            CLICK 'z'",
+      "        CLICK 'after inner'",
+      "    ELIF 'w' is present:",
+      "        CLICK 'w'",
+      "    CLICK 'after all'",
+      'DONE.',
+    ]
+
+    const lines = code.split('\n')
+    for (const edit of edits) {
+      lines[(edit.range as any).startLine] = edit.newText
+    }
+    expect(lines).toEqual(expected)
+  })
+
+  it('formats unformatted flat IF/ELIF/ELSE correctly', () => {
+    // Completely unformatted input (all at indent 0)
+    const code = [
+      'STEP 1: Test',
+      "IF 'x' is present:",
+      "CLICK 'x'",
+      "ELSE:",
+      "CLICK 'y'",
+      "CLICK 'done'",
+      'DONE.',
+    ].join('\n')
+
+    const doc = new MockTextDocument(code)
+    const formatter = new HuntDocumentFormatter()
+    const edits = formatter.provideDocumentFormattingEdits(doc as any, {} as any, {} as any)
+
+    const expected = [
+      'STEP 1: Test',
+      "    IF 'x' is present:",
+      "        CLICK 'x'",
+      '    ELSE:',
+      "        CLICK 'y'",
+      "        CLICK 'done'",
+      'DONE.',
+    ]
+
+    const lines = code.split('\n')
+    for (const edit of edits) {
+      lines[(edit.range as any).startLine] = edit.newText
+    }
+    expect(lines).toEqual(expected)
+  })
 })

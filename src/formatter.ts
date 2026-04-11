@@ -8,10 +8,10 @@ import { RE_STEP, RE_DONE, RE_HOOK_OPEN, RE_HOOK_CLOSE, RE_IF, RE_ELIF, RE_ELSE 
  *   0 spaces — @headers, STEP markers, DONE., [SETUP]/[TEARDOWN] block markers, top-level comments
  *   4 spaces — action commands, IF/ELIF/ELSE headers, comments inside STEP or hook blocks
  *   8 spaces — body lines inside IF/ELIF/ELSE conditional blocks
+ *   +4 per nesting level for nested IF/ELIF/ELSE blocks
  */
 
 const INDENT = "    "; // 4 spaces
-const DOUBLE_INDENT = "        "; // 8 spaces
 
 /** Lines that are always flush-left (0 indent). */
 const RE_HEADER = /^\s*@/;
@@ -24,7 +24,7 @@ export class HuntDocumentFormatter implements vscode.DocumentFormattingEditProvi
   ): vscode.TextEdit[] {
     const edits: vscode.TextEdit[] = [];
     let insideBlock = false; // true when inside a STEP group or hook block
-    let conditionalHeaderIndent = -1; // indent column of the active IF/ELIF/ELSE header, -1 = none
+    const conditionalStack: number[] = []; // stack of IF/ELIF/ELSE header indent widths
 
     for (let i = 0; i < document.lineCount; i++) {
       const line = document.lineAt(i);
@@ -40,6 +40,7 @@ export class HuntDocumentFormatter implements vscode.DocumentFormattingEditProvi
         continue;
       }
 
+      const origIndent = raw.length - raw.trimStart().length;
       let desired: string;
 
       // ── Zero-indent tokens ───────────────────────────────────────────
@@ -49,43 +50,67 @@ export class HuntDocumentFormatter implements vscode.DocumentFormattingEditProvi
       } else if (RE_STEP.test(stripped)) {
         // STEP 1: Label  or  STEP: Label
         insideBlock = true;
-        conditionalHeaderIndent = -1;
+        conditionalStack.length = 0;
         desired = stripped;
       } else if (RE_DONE.test(stripped)) {
         insideBlock = false;
-        conditionalHeaderIndent = -1;
+        conditionalStack.length = 0;
         desired = stripped;
       } else if (RE_HOOK_OPEN.test(stripped)) {
         // [SETUP] / [TEARDOWN]
         insideBlock = true;
-        conditionalHeaderIndent = -1;
+        conditionalStack.length = 0;
         desired = stripped;
       } else if (RE_HOOK_CLOSE.test(stripped)) {
         // [END SETUP] / [END TEARDOWN]
         insideBlock = false;
-        conditionalHeaderIndent = -1;
+        conditionalStack.length = 0;
         desired = stripped;
-      } else if (RE_IF.test(stripped) || RE_ELIF.test(stripped) || RE_ELSE.test(stripped)) {
-        // IF/ELIF/ELSE headers — same indent level as action lines (4 spaces inside a block)
-        const headerIndent = insideBlock ? INDENT.length : 0;
-        conditionalHeaderIndent = headerIndent;
-        desired = insideBlock ? INDENT + stripped : stripped;
-      } else {
-        // ── Action / comment lines ───────────────────────────────────
-        // Detect whether we've left the conditional body: a line whose
-        // *original* indent is at or below the header indent is a sibling,
-        // not a body child.  Skip the check when origIndent is 0 because
-        // that often means the file is completely unformatted.
-        if (conditionalHeaderIndent >= 0) {
-          const origIndent = raw.length - raw.trimStart().length;
-          if (origIndent > 0 && origIndent <= conditionalHeaderIndent) {
-            conditionalHeaderIndent = -1;
+      } else if (RE_IF.test(stripped)) {
+        // New IF block — pop stale nesting entries using origIndent hint
+        if (origIndent > 0) {
+          while (conditionalStack.length > 0 &&
+                 conditionalStack[conditionalStack.length - 1] >= origIndent) {
+            conditionalStack.pop();
           }
         }
-        desired = conditionalHeaderIndent >= 0
-          ? DOUBLE_INDENT + stripped
-          : insideBlock ? INDENT + stripped
-          : stripped;
+        const headerIndent = conditionalStack.length > 0
+          ? conditionalStack[conditionalStack.length - 1] + INDENT.length
+          : insideBlock ? INDENT.length : 0;
+        conditionalStack.push(headerIndent);
+        desired = headerIndent > 0 ? " ".repeat(headerIndent) + stripped : stripped;
+      } else if (RE_ELIF.test(stripped) || RE_ELSE.test(stripped)) {
+        // ELIF/ELSE — same indent as the matching IF (top of stack)
+        // Pop nested entries that sit deeper than the origIndent hint
+        if (origIndent > 0) {
+          while (conditionalStack.length > 1 &&
+                 conditionalStack[conditionalStack.length - 1] > origIndent) {
+            conditionalStack.pop();
+          }
+        }
+        if (conditionalStack.length > 0) {
+          const headerIndent = conditionalStack[conditionalStack.length - 1];
+          desired = headerIndent > 0 ? " ".repeat(headerIndent) + stripped : stripped;
+        } else {
+          desired = insideBlock ? INDENT + stripped : stripped;
+        }
+      } else {
+        // ── Action / comment lines ───────────────────────────────────
+        // Pop stale conditional entries when the original indent shows
+        // the line is at or above the header level (i.e. exited the body).
+        // Skip when origIndent is 0 — the file may be fully unformatted.
+        if (origIndent > 0) {
+          while (conditionalStack.length > 0 &&
+                 origIndent <= conditionalStack[conditionalStack.length - 1]) {
+            conditionalStack.pop();
+          }
+        }
+        if (conditionalStack.length > 0) {
+          const bodyIndent = conditionalStack[conditionalStack.length - 1] + INDENT.length;
+          desired = " ".repeat(bodyIndent) + stripped;
+        } else {
+          desired = insideBlock ? INDENT + stripped : stripped;
+        }
       }
 
       if (raw !== desired) {

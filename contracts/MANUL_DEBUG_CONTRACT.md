@@ -114,7 +114,7 @@
       ],
       "explainNextMarker": {
         "format": "\\x00MANUL_EXPLAIN_NEXT\\x00{json}\\n",
-        "json": "Serialized WhatIfResult via _result_to_dict(): step, score, confidence_label, target_found, target_element, explanation, risk, suggestion, heuristic_score, heuristic_match"
+        "json": "Serialized WhatIfResult via _result_to_dict(): step, score (normalized float 0.0–1.0), confidence_label, target_found, target_element, explanation, risk, suggestion, heuristic_score (normalized float 0.0–1.0 or null), heuristic_match"
       }
     },
 
@@ -248,17 +248,17 @@
       "importPath": "from manul_engine import WhatIfResult",
       "fields": [
         { "name": "step",             "type": "str",          "description": "The hypothetical step that was evaluated." },
-        { "name": "score",            "type": "int",          "description": "Confidence score 0–10." },
+        { "name": "score",            "type": "int",          "description": "Confidence score 0–10 (LLM or heuristic-mapped). Normalized to float [0.0, 1.0] by _result_to_dict() before emitting to the extension marker." },
         { "name": "target_found",     "type": "bool",         "description": "Whether a matching target element was found." },
         { "name": "target_element",   "type": "str | None",   "description": "Description of the matched element or None." },
         { "name": "explanation",      "type": "str",          "description": "What would happen if the step executes." },
         { "name": "risk",             "type": "str",          "description": "Potential side effects or failure modes." },
-        { "name": "suggestion",       "type": "str | None",   "description": "Improved step phrasing if score < 7, else None." },
-        { "name": "heuristic_score",  "type": "int | None",   "description": "DOMScorer best score (scaled integer) or None.", "default": "None" },
+        { "name": "suggestion",       "type": "str | None",   "description": "Improved step phrasing if score < 7 (raw 0–10 scale), else None." },
+        { "name": "heuristic_score",  "type": "int | None",   "description": "DOMScorer best score (raw scaled integer). Normalized to float [0.0, 1.0] by _result_to_dict() before emitting to the extension marker. None when unavailable.", "default": "None" },
         { "name": "heuristic_match",  "type": "str | None",   "description": "DOMScorer best candidate element name or None.", "default": "None" }
       ],
       "properties": [
-        { "name": "confidence_label", "type": "str", "description": "Human-readable label: HIGH (>=8), MODERATE (>=5), LOW (>=1), IMPOSSIBLE (0)." }
+        { "name": "confidence_label", "type": "str", "description": "Human-readable label derived from raw 0–10 score: HIGH (>=8), MODERATE (>=5), LOW (>=1), IMPOSSIBLE (0)." }
       ],
       "methods": [
         { "name": "format_report", "signature": "() -> str", "description": "Multi-line box-drawing report suitable for terminal output." }
@@ -280,7 +280,7 @@
       "frozen": true,
       "internal": true,
       "fields": [
-        { "name": "score",       "type": "int", "description": "DOMScorer best score (scaled integer)." },
+        { "name": "score",       "type": "int", "description": "DOMScorer best score (raw scaled integer, not yet normalized)." },
         { "name": "name",        "type": "str", "description": "Best candidate element name." },
         { "name": "xpath",       "type": "str", "description": "Best candidate xpath (for highlight routing)." },
         { "name": "frame_index", "type": "int", "description": "Frame index into page.frames." }
@@ -308,7 +308,7 @@
 
   "llmIntegration": {
     "systemPrompt": "WHAT_IF_SYSTEM_PROMPT",
-    "description": "Score-and-Explain prompt that receives page context, last executed step, and hypothetical step. LLM returns JSON with score (0–10), target_found, target_element, explanation, risk, suggestion.",
+    "description": "Score-and-Explain prompt that receives page context, last executed step, and hypothetical step. LLM returns JSON with score (int 0–10, raw), target_found, target_element, explanation, risk, suggestion. The engine normalizes score to [0.0, 1.0] via _result_to_dict() before emitting to the extension.",
     "responseSchema": {
       "score": "int 0–10",
       "target_found": "bool",
