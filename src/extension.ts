@@ -73,15 +73,23 @@ function applyHuntDecorations(
 ): void {
   if (editor.document.languageId !== "hunt") { return; }
   const doc = editor.document;
-  const verifyRanges = collectRanges(doc, VERIFY_RE, 1);
+
+  // Build set of comment line numbers so decorations skip them
+  const commentLines = new Set<number>();
+  for (let i = 0; i < doc.lineCount; i++) {
+    if (/^\s*#/.test(doc.lineAt(i).text)) { commentLines.add(i); }
+  }
+  const notComment = (r: vscode.Range) => !commentLines.has(r.start.line);
+
+  const verifyRanges = collectRanges(doc, VERIFY_RE, 1).filter(notComment);
   const verifySet = new Set(verifyRanges.map((r) => `${r.start.line}:${r.start.character}`));
-  const systemAll = collectRanges(doc, SYSTEM_RE, 1);
+  const systemAll = collectRanges(doc, SYSTEM_RE, 1).filter(notComment);
   const systemRanges = systemAll.filter((r) => !verifySet.has(`${r.start.line}:${r.start.character}`));
 
   editor.setDecorations(types.verify, verifyRanges);
   editor.setDecorations(types.system, systemRanges);
-  editor.setDecorations(types.cond,   collectRanges(doc, COND_RE, 1));
-  editor.setDecorations(types.action, collectRanges(doc, ACTION_RE, 1));
+  editor.setDecorations(types.cond,   collectRanges(doc, COND_RE, 1).filter(notComment));
+  editor.setDecorations(types.action, collectRanges(doc, ACTION_RE, 1).filter(notComment));
 }
 
 function registerHuntHighlighter(context: vscode.ExtensionContext): void {
