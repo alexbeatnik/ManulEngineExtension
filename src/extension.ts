@@ -16,7 +16,7 @@ import {
   clearSiteCacheCommand,
 } from "./cacheTreeProvider";
 import { DEBUG_TERMINAL_NAME, TERMINAL_NAME, getConfigFileName } from "./constants";
-import { MANUL_DSL_COMMANDS, getManulDslContextSuggestions } from "./shared";
+import { MANUL_DSL_COMMANDS, getManulDslContextSuggestions, RE_METADATA, RE_HOOK_OPEN, RE_HOOK_CLOSE } from "./shared";
 import { HuntDocumentFormatter } from "./formatter";
 import { SchedulerPanel } from "./schedulerPanel";
 import { ExplainHoverProvider, ExplainOutputParser, clearExplanations } from "./explainHoverProvider";
@@ -74,10 +74,11 @@ function applyHuntDecorations(
   if (editor.document.languageId !== "hunt") { return; }
   const doc = editor.document;
 
-  // Build set of comment line numbers so decorations skip them
-  const commentLines = new Set<number>();
+  // Build set of line numbers to skip: comments, metadata directives, hook block markers
+  const skipLines = new Set<number>();
   for (let i = 0; i < doc.lineCount; i++) {
-    if (/^\s*#/.test(doc.lineAt(i).text)) { commentLines.add(i); }
+    const text = doc.lineAt(i).text;
+    if (/^\s*#/.test(text) || RE_METADATA.test(text) || RE_HOOK_OPEN.test(text) || RE_HOOK_CLOSE.test(text)) { skipLines.add(i); }
   }
 
   // Build list of exclusion intervals per line (quoted strings + STEP descriptions)
@@ -85,7 +86,7 @@ function applyHuntDecorations(
   const STEP_DESC_RE = /^(\s*(?:\d+\.\s*)?STEP\s*\d*\s*:)/i;
   const excludedIntervals: Map<number, [number, number][]> = new Map();
   for (let i = 0; i < doc.lineCount; i++) {
-    if (commentLines.has(i)) { continue; }
+    if (skipLines.has(i)) { continue; }
     const line = doc.lineAt(i).text;
     const intervals: [number, number][] = [];
     // Exclude STEP header description (everything after the colon)
@@ -101,7 +102,7 @@ function applyHuntDecorations(
   }
 
   const notExcluded = (r: vscode.Range) => {
-    if (commentLines.has(r.start.line)) { return false; }
+    if (skipLines.has(r.start.line)) { return false; }
     const intervals = excludedIntervals.get(r.start.line);
     if (!intervals) { return true; }
     const col = r.start.character;
