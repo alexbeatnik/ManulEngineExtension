@@ -485,4 +485,17 @@ describe('validateHuntDocument', () => {
     expect(diagnostics[0].code).toBe('orphaned-branch')
     expect(diagnostics[0].line).toBe(7)
   })
+
+  it('rejects IF/ELIF/ELSE inside hook blocks', () => {
+    const diagnostics = validateHuntDocument([
+      '[SETUP]',
+      "    IF button 'X' exists:",
+      "        CLICK the 'X' button",
+      '[END SETUP]',
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics.length).toBeGreaterThanOrEqual(1)
+    expect(diagnostics.some(d => d.code === 'invalid-hook-block')).toBe(true)
+  })
 })

@@ -303,20 +303,6 @@ export class StepBuilderProvider implements vscode.WebviewViewProvider {
     </button>
   </div>
 
-  <!-- ── Conditionals ──────────────────────────────────────────── -->
-  <div class="sb-section">
-    <div class="sb-section-title">CONDITIONALS</div>
-    <button class="sb-list-btn" data-template="IF \${1:condition}:\n        \${2:action}">
-      <span class="sb-list-icon">🔀</span><span class="sb-list-label">IF block</span>
-    </button>
-    <button class="sb-list-btn" data-template="ELIF \${1:condition}:\n        \${2:action}">
-      <span class="sb-list-icon">🔀</span><span class="sb-list-label">ELIF branch</span>
-    </button>
-    <button class="sb-list-btn" data-template="ELSE:\n        \${1:action}">
-      <span class="sb-list-icon">🔀</span><span class="sb-list-label">ELSE branch</span>
-    </button>
-  </div>
-
   <!-- ── Proximity Builder ─────────────────────────────────────── -->
   <div class="sb-section">
     <div class="sb-section-title">PROXIMITY BUILDER</div>

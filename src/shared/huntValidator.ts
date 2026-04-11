@@ -364,59 +364,7 @@ export function validateHuntDocument(content: string): HuntValidationDiagnostic[
 
     const indent = indentLevel(line)
 
-    // ── Well-formed IF/ELIF/ELSE — validate structural ordering ──────────
-    if (RE_IF.test(line)) {
-      setConditional(indent, 'if')
-      continue
-    }
-
-    if (RE_ELIF.test(line)) {
-      const frame = currentConditional(indent)
-      if (!frame || frame.state === 'else') {
-        diagnostics.push(
-          makeDiagnostic(lineNumber, line, 'ELIF must follow an IF or another ELIF block.', 'orphaned-branch'),
-        )
-      }
-      setConditional(indent, 'elif')
-      continue
-    }
-
-    if (RE_ELSE.test(line)) {
-      const frame = currentConditional(indent)
-      if (!frame || frame.state === 'else') {
-        diagnostics.push(
-          makeDiagnostic(lineNumber, line, 'ELSE must follow an IF or ELIF block.', 'orphaned-branch'),
-        )
-      }
-      setConditional(indent, 'else')
-      continue
-    }
-
-    // ── Malformed conditionals — missing colon ──────────────────────────
-    if (RE_IF_NO_COLON.test(line)) {
-      diagnostics.push(
-        makeDiagnostic(lineNumber, line, 'IF condition must end with a colon. Example: IF button \'Save\' exists:', 'invalid-conditional'),
-      )
-      setConditional(indent, 'if')
-      continue
-    }
-
-    if (RE_ELIF_NO_COLON.test(line)) {
-      diagnostics.push(
-        makeDiagnostic(lineNumber, line, 'ELIF condition must end with a colon. Example: ELIF text \'Error\' is present:', 'invalid-conditional'),
-      )
-      setConditional(indent, 'elif')
-      continue
-    }
-
-    if (RE_ELSE_MALFORMED.test(line)) {
-      diagnostics.push(
-        makeDiagnostic(lineNumber, line, 'ELSE must be followed by a colon and nothing else. Example: ELSE:', 'invalid-conditional'),
-      )
-      setConditional(indent, 'else')
-      continue
-    }
-
+    // ── Hook block open/close must be checked before conditionals ────────
     if (RE_HOOK_OPEN.test(line)) {
       conditionalStack.length = 0
       if (hookState) {
@@ -451,6 +399,63 @@ export function validateHuntDocument(content: string): HuntValidationDiagnostic[
 
       hookState = null
       continue
+    }
+
+    // ── Well-formed IF/ELIF/ELSE — validate structural ordering ──────────
+    // Conditionals are not allowed inside hook blocks; skip and let them
+    // fall through to isValidHuntActionLine() which rejects them.
+    if (!hookState) {
+      if (RE_IF.test(line)) {
+        setConditional(indent, 'if')
+        continue
+      }
+
+      if (RE_ELIF.test(line)) {
+        const frame = currentConditional(indent)
+        if (!frame || frame.state === 'else') {
+          diagnostics.push(
+            makeDiagnostic(lineNumber, line, 'ELIF must follow an IF or another ELIF block.', 'orphaned-branch'),
+          )
+        }
+        setConditional(indent, 'elif')
+        continue
+      }
+
+      if (RE_ELSE.test(line)) {
+        const frame = currentConditional(indent)
+        if (!frame || frame.state === 'else') {
+          diagnostics.push(
+            makeDiagnostic(lineNumber, line, 'ELSE must follow an IF or ELIF block.', 'orphaned-branch'),
+          )
+        }
+        setConditional(indent, 'else')
+        continue
+      }
+
+      // ── Malformed conditionals — missing colon ──────────────────────────
+      if (RE_IF_NO_COLON.test(line)) {
+        diagnostics.push(
+          makeDiagnostic(lineNumber, line, 'IF condition must end with a colon. Example: IF button \'Save\' exists:', 'invalid-conditional'),
+        )
+        setConditional(indent, 'if')
+        continue
+      }
+
+      if (RE_ELIF_NO_COLON.test(line)) {
+        diagnostics.push(
+          makeDiagnostic(lineNumber, line, 'ELIF condition must end with a colon. Example: ELIF text \'Error\' is present:', 'invalid-conditional'),
+        )
+        setConditional(indent, 'elif')
+        continue
+      }
+
+      if (RE_ELSE_MALFORMED.test(line)) {
+        diagnostics.push(
+          makeDiagnostic(lineNumber, line, 'ELSE must be followed by a colon and nothing else. Example: ELSE:', 'invalid-conditional'),
+        )
+        setConditional(indent, 'else')
+        continue
+      }
     }
 
     if (!isValidHuntActionLine(line, { insideHookBlock: Boolean(hookState) })) {

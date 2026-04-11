@@ -139,6 +139,8 @@ A separate **ManulEngine: Explain Heuristics** output channel captures the full 
 
 ### Step Builder and Proximity Builder
 
+<img src="images/step-builder.png" alt="Step Builder sidebar" width="380" />
+
 The **Step Builder** sidebar inserts DSL commands with a single click — every command from the DSL registry is available as a button.
 
 The **Proximity Builder** form lets you compose contextual steps visually:
@@ -217,6 +219,8 @@ Debug breakpoints, Test Explorer, and live output streaming work identically whe
 - `--break-lines` piped stdio protocol: Python emits a marker on stdout; the extension responds on stdin
 
 ### Configuration panel
+
+<img src="images/configuration-panel.png" alt="Configuration panel sidebar" width="380" />
 
 Interactive sidebar for `manul_engine_configuration.json` — model selection, browser choice, timeouts, cache toggles, workers, screenshot mode, explain mode. Ollama status indicator with live reachability and model autocomplete.
 
