@@ -17,7 +17,7 @@ Write browser automation in plain English. Run it, debug it, and understand ever
 
 > **Alpha.** Solo-developed and actively battle-tested. Feature-rich, not yet hardened across every edge case. The goal is transparent execution and strong debugging ergonomics, not inflated claims.
 
-> **📖 Full Documentation:** [Overview](docs/overview.md) · [Installation](docs/installation.md) · [Getting Started](docs/getting-started.md) · [DSL Syntax](docs/dsl-syntax.md) · [Reports & Explainability](docs/reports.md) · [Integration](docs/integration.md)
+> **📖 Full Documentation:** [Overview](https://github.com/alexbeatnik/ManulEngine/blob/main/docs/overview.md) · [Installation](https://github.com/alexbeatnik/ManulEngine/blob/main/docs/installation.md) · [Getting Started](https://github.com/alexbeatnik/ManulEngine/blob/main/docs/getting-started.md) · [DSL Syntax](https://github.com/alexbeatnik/ManulEngine/blob/main/docs/dsl-syntax.md) · [Reports & Explainability](https://github.com/alexbeatnik/ManulEngine/blob/main/docs/reports.md) · [Integration](https://github.com/alexbeatnik/ManulEngine/blob/main/docs/integration.md)
 
 ---
 
