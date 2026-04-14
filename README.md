@@ -5,9 +5,12 @@
 # ManulEngine — VS Code Extension
 
 [![Manul Engine Extension](https://img.shields.io/visual-studio-marketplace/v/manul-engine.manul-engine?label=Manul%20Engine%20Extension&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-engine)
+[![Manul Engine Extension (Open VSX)](https://img.shields.io/open-vsx/v/manul-engine/manul-engine?label=Open%20VSX&logo=eclipse-ide)](https://open-vsx.org/extension/manul-engine/manul-engine)
 [![PyPI](https://img.shields.io/pypi/v/manul-engine?label=PyPI&logo=pypi)](https://pypi.org/project/manul-engine/)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/manul-engine?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/manul-engine)
 [![MCP Server](https://img.shields.io/visual-studio-marketplace/v/manul-engine.manul-mcp-server?label=MCP%20Server&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-mcp-server)
+[![MCP Server (Open VSX)](https://img.shields.io/open-vsx/v/manul-engine/manul-mcp-server?label=MCP%20Server%20Open%20VSX&logo=eclipse-ide)](https://open-vsx.org/extension/manul-engine/manul-mcp-server)
+[![ManulAI Local Agent](https://img.shields.io/visual-studio-marketplace/v/manul-engine.manulai-local-agent?label=ManulAI%20Local%20Agent&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=manul-engine.manulai-local-agent)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-d97706)](#status)
 
 Write browser automation in plain English. Run it, debug it, and understand every decision the engine makes — all without leaving VS Code.
@@ -31,7 +34,7 @@ Write browser automation in plain English. Run it, debug it, and understand ever
 ### 1. Install the runtime
 
 ```bash
-pip install manul-engine==0.0.9.28
+pip install manul-engine==0.0.9.29
 playwright install chromium
 ```
 
@@ -241,6 +244,34 @@ ELSE:
 
 `IF`/`ELIF`/`ELSE` blocks are first-class: syntax highlighting, validation, Step Builder buttons, and autocomplete all support them.
 
+### Loops
+
+Repeat actions with `REPEAT`, iterate data with `FOR EACH`, or poll dynamic state with `WHILE`. Loops nest freely with conditionals.
+
+```text
+@var: {products} = Laptop, Headphones, Mouse
+
+STEP 1: Add products to cart
+    FOR EACH {product} IN {products}:
+        FILL 'Search' field with '{product}'
+        PRESS Enter
+        CLICK the 'Add to Cart' button NEAR '{product}'
+        VERIFY that 'Added to cart' is present
+
+STEP 2: Load all reviews
+    WHILE button 'Load More' exists:
+        CLICK the 'Load More' button
+        WAIT 2
+
+STEP 3: Retry checkout
+    REPEAT 3 TIMES:
+        CLICK the 'Place Order' button
+        IF text 'Success' is present:
+            VERIFY that 'Order confirmed' is present
+```
+
+`REPEAT N TIMES:` runs a fixed count. `FOR EACH {var} IN {collection}:` iterates comma-separated values. `WHILE <condition>:` repeats until the condition is false (safety limit: 100 iterations). `{i}` counter is auto-set on every iteration.
+
 ---
 
 ## Settings reference
@@ -275,39 +306,12 @@ ELSE:
 
 ## Ecosystem
 
-### ManulEngine runtime
-
-The deterministic Playwright-backed runtime that interprets `.hunt` files. Resolves DOM elements with weighted heuristic scoring (`DOMScorer` + `TreeWalker`), no CSS selectors, no cloud APIs.
-
-```bash
-pip install manul-engine==0.0.9.28
-```
-
-[PyPI](https://pypi.org/project/manul-engine/) · [GitHub](https://github.com/alexbeatnik/ManulEngine)
-
-### MCP Server for GitHub Copilot
-
-Turns ManulEngine into a native MCP server. Copilot Chat gains tools like `manul_run_step`, `manul_run_goal`, `manul_scan_page`, and `manul_save_hunt` — driving a real browser session from natural language.
-
-```bash
-code --install-extension manul-engine.manul-mcp-server
-```
-
-[Marketplace](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-mcp-server) · [GitHub](https://github.com/alexbeatnik/ManulMcpServer)
-
-### Python API (`ManulSession`)
-
-Async context manager for pure-Python automation, routed through the full heuristic pipeline.
-
-```python
-from manul_engine import ManulSession
-
-async with ManulSession(headless=True) as session:
-    await session.navigate("https://example.com/login")
-    await session.fill("Username field", "admin")
-    await session.click("Log in button")
-    await session.verify("Welcome")
-```
+| Component | Role | Links |
+|-----------|------|-------|
+| **ManulEngine** | Deterministic automation runtime (Python). Heuristic element resolver, `.hunt` DSL, CLI runner. | [PyPI](https://pypi.org/project/manul-engine/) · [GitHub](https://github.com/alexbeatnik/ManulEngine) |
+| **Manul Engine Extension** | VS Code extension for ManulEngine with debug panel, explain mode, and Test Explorer integration. | [Marketplace](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-engine) · [Open VSX](https://open-vsx.org/extension/manul-engine/manul-engine) · [GitHub](https://github.com/alexbeatnik/ManulEngineExtension) |
+| **ManulMcpServer** | MCP bridge that gives Copilot Chat and other agents access to ManulEngine. | [Marketplace](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-mcp-server) · [Open VSX](https://open-vsx.org/extension/manul-engine/manul-mcp-server) · [GitHub](https://github.com/alexbeatnik/ManulMcpServer) |
+| **ManulAI Local Agent** | Autonomous AI agent for browser automation, powered by ManulEngine. | [Marketplace](https://marketplace.visualstudio.com/items?itemName=manul-engine.manulai-local-agent) · [Open VSX](https://open-vsx.org/extension/manul-engine/manulai-local-agent) · [GitHub](https://github.com/alexbeatnik/ManulAI-local-agent) |
 
 ---
 
@@ -335,13 +339,23 @@ Try the extension. [File an issue](https://github.com/alexbeatnik/ManulEngineExt
 
 ---
 
-## What's New in 0.0.9.28
+## What's New in 0.0.9.29
+
+- Bumped extension manifest to `0.0.929` and pinned ManulEngine runtime to `0.0.9.29`.
+- Added `REPEAT N TIMES:`, `FOR EACH {var} IN {collection}:`, `WHILE <condition>:` loop constructs — syntax highlighting, formatter indentation, validator diagnostics, Step Builder buttons, autocomplete.
+- Updated Ecosystem section with full component table and additional badges (Open VSX, ManulAI Local Agent).
+- Updated all DSL contracts from engine.
+
+<details>
+<summary>0.0.9.28</summary>
 
 - Bumped extension manifest to `0.0.928` and pinned ManulEngine runtime to `0.0.9.28`.
 - Added `IF`/`ELIF`/`ELSE` conditional branching — syntax highlighting, validator, Step Builder buttons, autocomplete.
 - Updated all DSL contracts from engine (labels to ALL\_UPPERCASE canonical form, new `casePolicy` and `elementTypeHint` metadata).
 - Added new `MANUL_DEBUG_CONTRACT.md` from engine.
 - Removed "Add Demo Tests" and "Add Default Prompts" buttons and related scaffolding.
+
+</details>
 
 <details>
 <summary>0.0.9.27</summary>
@@ -357,17 +371,9 @@ Try the extension. [File an issue](https://github.com/alexbeatnik/ManulEngineExt
 
 </details>
 
-<details>
-<summary>0.0.9.26</summary>
-
-- Moved the VS Code extension from `packages/extension` to the repository root.
-- Kept runtime contracts and shared logic under `src/shared`.
-- Preserved the pinned ManulEngine runtime at `0.0.9.26` and manifest version at `0.0.926`.
-
-</details>
 
 ## License
 
-**Version:** 0.0.928
+**Version:** 0.0.929
 
 Apache-2.0. See `LICENSE`.
