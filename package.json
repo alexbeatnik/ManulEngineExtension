@@ -2,7 +2,7 @@
   "name": "manul-engine",
   "displayName": "ManulEngine",
   "description": "Write browser automation in plain English. ManulEngine interprets .hunt files through deterministic DOM heuristics on top of Playwright — no selectors, no cloud APIs, no AI required.",
-  "version": "0.0.928",
+  "version": "0.0.929",
   "publisher": "manul-engine",
   "icon": "images/icon128.png",
   "repository": {
@@ -50,6 +50,12 @@
           },
           {
             "scope": "keyword.control.conditional.hunt",
+            "settings": {
+              "foreground": "#C586C0"
+            }
+          },
+          {
+            "scope": "keyword.control.loop.hunt",
             "settings": {
               "foreground": "#C586C0"
             }

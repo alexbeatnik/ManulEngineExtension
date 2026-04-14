@@ -10,6 +10,7 @@
     { "include": "#done-keyword" },
     { "include": "#verify-keyword" },
     { "include": "#conditional-keyword" },
+    { "include": "#loop-keyword" },
     { "include": "#set-command" },
     { "include": "#system-keyword" },
     { "include": "#action-verb" },
@@ -90,6 +91,10 @@
       "name": "keyword.control.conditional.hunt",
       "match": "(?i)\\b(IF|ELIF|ELSE)\\b"
     },
+    "loop-keyword": {
+      "name": "keyword.control.loop.hunt",
+      "match": "(?i)\\b(REPEAT|FOR\\s+EACH|WHILE|TIMES)\\b"
+    },
     "set-command": {
       "name": "meta.set-command.hunt",
       "match": "(?i)\\b(SET)\\s+(\\{?\\w+\\}?)\\s*(=)\\s*(.*)",
@@ -138,7 +143,7 @@
     },
     "modifier": {
       "name": "keyword.other.modifier.hunt",
-      "match": "(?i)\\b(if exists|optional|NOT|DISABLED|ENABLED|SOFTLY|VISUAL|ON HEADER|ON FOOTER|is present|is checked|is NOT checked|is NOT present|be visible|be hidden|disappear|into|from|to|that|the|with|near|inside|on|header|footer|row|field|button|link|checkbox|dropdown|input|has|text|placeholder|value|args|exists|contains)\\b"
+      "match": "(?i)\\b(if exists|optional|NOT|DISABLED|ENABLED|SOFTLY|VISUAL|ON HEADER|ON FOOTER|is present|is checked|is NOT checked|is NOT present|be visible|be hidden|disappear|into|from|to|that|the|with|near|inside|on|header|footer|row|field|button|link|checkbox|dropdown|input|has|text|placeholder|value|args|exists|contains|in)\\b"
     }
   }
 }
