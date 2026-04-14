@@ -99,7 +99,7 @@ export const RE_ELIF = /^\s*(?:\d+\.\s*)?ELIF\b.+:\s*$/i
 export const RE_ELSE = /^\s*(?:\d+\.\s*)?ELSE\s*:\s*$/i
 export const RE_REPEAT = /^\s*(?:\d+\.\s*)?REPEAT\s+\d+\s+TIMES\s*:\s*$/i
 export const RE_FOR_EACH = /^\s*(?:\d+\.\s*)?FOR\s+EACH\s+\{?[A-Za-z_]\w*\}?\s+IN\s+\{?[A-Za-z_]\w*\}?\s*:\s*$/i
-export const RE_WHILE = /^\s*(?:\d+\.\s*)?WHILE\b.+:\s*$/i
+export const RE_WHILE = /^\s*(?:\d+\.\s*)?WHILE\b.*[^\s:].*:\s*$/i
 
 /** Matches IF/ELIF without trailing colon — used for helpful diagnostics. */
 const RE_IF_NO_COLON = /^\s*(?:\d+\.\s*)?IF\b.+[^:\s]\s*$/i

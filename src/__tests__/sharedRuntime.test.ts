@@ -662,4 +662,16 @@ describe('validateHuntDocument', () => {
     expect(diagnostics[0].code).toBe('orphaned-branch')
     expect(diagnostics[0].message).toContain('ELSE must follow')
   })
+
+  it('rejects empty-condition WHILE header', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: Empty while',
+      '    WHILE :',
+      "        CLICK the 'X' button",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('invalid-command')
+  })
 })
