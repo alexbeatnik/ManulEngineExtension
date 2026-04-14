@@ -17,6 +17,8 @@ Write browser automation in plain English. Run it, debug it, and understand ever
 
 > **Alpha.** Solo-developed and actively battle-tested. Feature-rich, not yet hardened across every edge case. The goal is transparent execution and strong debugging ergonomics, not inflated claims.
 
+> **📖 Full Documentation:** [Overview](docs/overview.md) · [Installation](docs/installation.md) · [Getting Started](docs/getting-started.md) · [DSL Syntax](docs/dsl-syntax.md) · [Reports & Explainability](docs/reports.md) · [Integration](docs/integration.md)
+
 ---
 
 ## What you get
@@ -344,7 +346,7 @@ Try the extension. [File an issue](https://github.com/alexbeatnik/ManulEngineExt
 - Bumped extension manifest to `0.0.929` and pinned ManulEngine runtime to `0.0.9.29`.
 - Added `REPEAT N TIMES:`, `FOR EACH {var} IN {collection}:`, `WHILE <condition>:` loop constructs — syntax highlighting, formatter indentation, validator diagnostics, Step Builder buttons, autocomplete.
 - Updated Ecosystem section with full component table and additional badges (Open VSX, ManulAI Local Agent).
-- Updated all DSL contracts from engine.
+- Updated `src/shared/manul-dsl-contract.json` from engine.
 
 <details>
 <summary>0.0.9.28</summary>

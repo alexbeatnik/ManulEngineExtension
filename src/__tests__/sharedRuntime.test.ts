@@ -632,4 +632,34 @@ describe('validateHuntDocument', () => {
 
     expect(diagnostics).toEqual([])
   })
+
+  it('reports orphaned ELIF after a loop header', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: Bad branch after loop',
+      '    REPEAT 3 TIMES:',
+      "        CLICK the 'Retry' button",
+      '    ELIF text \'Error\' is present:',
+      "        VERIFY that 'Error' is present",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('orphaned-branch')
+    expect(diagnostics[0].message).toContain('ELIF must follow')
+  })
+
+  it('reports orphaned ELSE after a loop header', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: Bad branch after loop',
+      '    WHILE button \'Next\' exists:',
+      "        CLICK the 'Next' button",
+      '    ELSE:',
+      "        VERIFY that 'Done' is present",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('orphaned-branch')
+    expect(diagnostics[0].message).toContain('ELSE must follow')
+  })
 })

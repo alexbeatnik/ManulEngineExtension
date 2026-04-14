@@ -98,7 +98,7 @@ export const RE_IF = /^\s*(?:\d+\.\s*)?IF\b.+:\s*$/i
 export const RE_ELIF = /^\s*(?:\d+\.\s*)?ELIF\b.+:\s*$/i
 export const RE_ELSE = /^\s*(?:\d+\.\s*)?ELSE\s*:\s*$/i
 export const RE_REPEAT = /^\s*(?:\d+\.\s*)?REPEAT\s+\d+\s+TIMES\s*:\s*$/i
-export const RE_FOR_EACH = /^\s*(?:\d+\.\s*)?FOR\s+EACH\s+\{?\w+\}?\s+IN\s+\{?\w+\}?\s*:\s*$/i
+export const RE_FOR_EACH = /^\s*(?:\d+\.\s*)?FOR\s+EACH\s+\{?[A-Za-z_]\w*\}?\s+IN\s+\{?[A-Za-z_]\w*\}?\s*:\s*$/i
 export const RE_WHILE = /^\s*(?:\d+\.\s*)?WHILE\b.+:\s*$/i
 
 /** Matches IF/ELIF without trailing colon — used for helpful diagnostics. */
@@ -108,7 +108,7 @@ const RE_ELSE_MALFORMED = /^\s*(?:\d+\.\s*)?ELSE\b(?!\s*:).*/i
 
 /** Matches loop headers without trailing colon — used for helpful diagnostics. */
 const RE_REPEAT_NO_COLON = /^\s*(?:\d+\.\s*)?REPEAT\s+\d+\s+TIMES\s*$/i
-const RE_FOR_EACH_NO_COLON = /^\s*(?:\d+\.\s*)?FOR\s+EACH\s+\{?\w+\}?\s+IN\s+\{?\w+\}?\s*$/i
+const RE_FOR_EACH_NO_COLON = /^\s*(?:\d+\.\s*)?FOR\s+EACH\s+\{?[A-Za-z_]\w*\}?\s+IN\s+\{?[A-Za-z_]\w*\}?\s*$/i
 const RE_WHILE_NO_COLON = /^\s*(?:\d+\.\s*)?WHILE\b.+[^:\s]\s*$/i
 
 function countQuotedFragments(line: string): number {
@@ -321,7 +321,7 @@ function makeDiagnostic(
   }
 }
 
-type ConditionalState = 'if' | 'elif' | 'else'
+type ConditionalState = 'if' | 'elif' | 'else' | 'loop'
 type ConditionalFrame = { state: ConditionalState; indent: number }
 
 function indentLevel(line: string): number {
@@ -426,7 +426,7 @@ export function validateHuntDocument(content: string): HuntValidationDiagnostic[
 
       if (RE_ELIF.test(line)) {
         const frame = currentConditional(indent)
-        if (!frame || frame.state === 'else') {
+        if (!frame || frame.state === 'else' || frame.state === 'loop') {
           diagnostics.push(
             makeDiagnostic(lineNumber, line, 'ELIF must follow an IF or another ELIF block.', 'orphaned-branch'),
           )
@@ -437,7 +437,7 @@ export function validateHuntDocument(content: string): HuntValidationDiagnostic[
 
       if (RE_ELSE.test(line)) {
         const frame = currentConditional(indent)
-        if (!frame || frame.state === 'else') {
+        if (!frame || frame.state === 'else' || frame.state === 'loop') {
           diagnostics.push(
             makeDiagnostic(lineNumber, line, 'ELSE must follow an IF or ELIF block.', 'orphaned-branch'),
           )
@@ -473,10 +473,9 @@ export function validateHuntDocument(content: string): HuntValidationDiagnostic[
 
       // ── Well-formed loop headers ────────────────────────────────────────
       if (RE_REPEAT.test(line) || RE_FOR_EACH.test(line) || RE_WHILE.test(line)) {
-        // Loops create a block scope like IF — push onto the conditional
-        // stack so body lines get deeper indent and the frame is popped
-        // when indent returns to the header level.
-        setConditional(indent, 'if')
+        // Loops create a block scope for indentation tracking but must not
+        // be treated as IF frames — ELIF/ELSE after a loop is orphaned.
+        setConditional(indent, 'loop')
         continue
       }
 
