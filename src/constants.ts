@@ -12,11 +12,14 @@ export {
   RE_DONE,
   RE_ELIF,
   RE_ELSE,
+  RE_FOR_EACH,
   RE_HOOK_CLOSE,
   RE_HOOK_OPEN,
   RE_IF,
   RE_METADATA,
+  RE_REPEAT,
   RE_STEP,
+  RE_WHILE,
 } from "./shared";
 
 /** Terminal name for normal (non-debug) hunt runs. */

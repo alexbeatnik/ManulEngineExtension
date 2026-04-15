@@ -10,6 +10,7 @@ export type HuntValidationDiagnosticCode =
   | 'unclosed-hook-block'
   | 'invalid-conditional'
   | 'orphaned-branch'
+  | 'invalid-loop'
 
 export interface HuntValidationDiagnostic {
   line: number
@@ -96,11 +97,19 @@ export const RE_COMMENT = new RegExp(`^\\s*${escapeRegExp(MANUL_DSL_CONTRACT.com
 export const RE_IF = /^\s*(?:\d+\.\s*)?IF\b.+:\s*$/i
 export const RE_ELIF = /^\s*(?:\d+\.\s*)?ELIF\b.+:\s*$/i
 export const RE_ELSE = /^\s*(?:\d+\.\s*)?ELSE\s*:\s*$/i
+export const RE_REPEAT = /^\s*(?:\d+\.\s*)?REPEAT\s+\d+\s+TIMES\s*:\s*$/i
+export const RE_FOR_EACH = /^\s*(?:\d+\.\s*)?FOR\s+EACH\s+\{?[A-Za-z_]\w*\}?\s+IN\s+\{?[A-Za-z_]\w*\}?\s*:\s*$/i
+export const RE_WHILE = /^\s*(?:\d+\.\s*)?WHILE\b.*[^\s:].*:\s*$/i
 
 /** Matches IF/ELIF without trailing colon — used for helpful diagnostics. */
 const RE_IF_NO_COLON = /^\s*(?:\d+\.\s*)?IF\b.+[^:\s]\s*$/i
 const RE_ELIF_NO_COLON = /^\s*(?:\d+\.\s*)?ELIF\b.+[^:\s]\s*$/i
 const RE_ELSE_MALFORMED = /^\s*(?:\d+\.\s*)?ELSE\b(?!\s*:).*/i
+
+/** Matches loop headers without trailing colon — used for helpful diagnostics. */
+const RE_REPEAT_NO_COLON = /^\s*(?:\d+\.\s*)?REPEAT\s+\d+\s+TIMES\s*$/i
+const RE_FOR_EACH_NO_COLON = /^\s*(?:\d+\.\s*)?FOR\s+EACH\s+\{?[A-Za-z_]\w*\}?\s+IN\s+\{?[A-Za-z_]\w*\}?\s*$/i
+const RE_WHILE_NO_COLON = /^\s*(?:\d+\.\s*)?WHILE\b.+[^:\s]\s*$/i
 
 function countQuotedFragments(line: string): number {
   return line.match(QUOTED_FRAGMENT_RE)?.length ?? 0
@@ -312,7 +321,7 @@ function makeDiagnostic(
   }
 }
 
-type ConditionalState = 'if' | 'elif' | 'else'
+type ConditionalState = 'if' | 'elif' | 'else' | 'loop'
 type ConditionalFrame = { state: ConditionalState; indent: number }
 
 function indentLevel(line: string): number {
@@ -417,7 +426,7 @@ export function validateHuntDocument(content: string): HuntValidationDiagnostic[
 
       if (RE_ELIF.test(line)) {
         const frame = currentConditional(indent)
-        if (!frame || frame.state === 'else') {
+        if (!frame || frame.state === 'else' || frame.state === 'loop') {
           diagnostics.push(
             makeDiagnostic(lineNumber, line, 'ELIF must follow an IF or another ELIF block.', 'orphaned-branch'),
           )
@@ -428,7 +437,7 @@ export function validateHuntDocument(content: string): HuntValidationDiagnostic[
 
       if (RE_ELSE.test(line)) {
         const frame = currentConditional(indent)
-        if (!frame || frame.state === 'else') {
+        if (!frame || frame.state === 'else' || frame.state === 'loop') {
           diagnostics.push(
             makeDiagnostic(lineNumber, line, 'ELSE must follow an IF or ELIF block.', 'orphaned-branch'),
           )
@@ -459,6 +468,36 @@ export function validateHuntDocument(content: string): HuntValidationDiagnostic[
           makeDiagnostic(lineNumber, line, 'ELSE must be followed by a colon and nothing else. Example: ELSE:', 'invalid-conditional'),
         )
         setConditional(indent, 'else')
+        continue
+      }
+
+      // ── Well-formed loop headers ────────────────────────────────────────
+      if (RE_REPEAT.test(line) || RE_FOR_EACH.test(line) || RE_WHILE.test(line)) {
+        // Loops create a block scope for indentation tracking but must not
+        // be treated as IF frames — ELIF/ELSE after a loop is orphaned.
+        setConditional(indent, 'loop')
+        continue
+      }
+
+      // ── Malformed loops — missing colon ─────────────────────────────────
+      if (RE_REPEAT_NO_COLON.test(line)) {
+        diagnostics.push(
+          makeDiagnostic(lineNumber, line, 'REPEAT loop must end with a colon. Example: REPEAT 3 TIMES:', 'invalid-loop'),
+        )
+        continue
+      }
+
+      if (RE_FOR_EACH_NO_COLON.test(line)) {
+        diagnostics.push(
+          makeDiagnostic(lineNumber, line, 'FOR EACH loop must end with a colon. Example: FOR EACH {item} IN {items}:', 'invalid-loop'),
+        )
+        continue
+      }
+
+      if (RE_WHILE_NO_COLON.test(line)) {
+        diagnostics.push(
+          makeDiagnostic(lineNumber, line, 'WHILE loop must end with a colon. Example: WHILE button \'Next\' exists:', 'invalid-loop'),
+        )
         continue
       }
     }

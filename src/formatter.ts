@@ -1,14 +1,14 @@
 import * as vscode from "vscode";
-import { RE_STEP, RE_DONE, RE_HOOK_OPEN, RE_HOOK_CLOSE, RE_IF, RE_ELIF, RE_ELSE } from "./constants";
+import { RE_STEP, RE_DONE, RE_HOOK_OPEN, RE_HOOK_CLOSE, RE_IF, RE_ELIF, RE_ELSE, RE_REPEAT, RE_FOR_EACH, RE_WHILE } from "./constants";
 
 /**
  * Document formatter for .hunt DSL files.
  *
  * Applies YAML/Python-like visual hierarchy:
  *   0 spaces — @headers, STEP markers, DONE., [SETUP]/[TEARDOWN] block markers, top-level comments
- *   4 spaces — action commands, IF/ELIF/ELSE headers, comments inside STEP or hook blocks
- *   8 spaces — body lines inside IF/ELIF/ELSE conditional blocks
- *   +4 per nesting level for nested IF/ELIF/ELSE blocks
+ *   4 spaces — action commands, IF/ELIF/ELSE headers, loop headers (REPEAT/FOR EACH/WHILE), comments inside STEP or hook blocks
+ *   8 spaces — body lines inside IF/ELIF/ELSE conditional blocks and loop blocks
+ *   +4 per nesting level for nested IF/ELIF/ELSE/loop blocks
  */
 
 const INDENT = "    "; // 4 spaces
@@ -68,6 +68,19 @@ export class HuntDocumentFormatter implements vscode.DocumentFormattingEditProvi
         desired = stripped;
       } else if (RE_IF.test(stripped)) {
         // New IF block — pop stale nesting entries using origIndent hint
+        if (origIndent > 0) {
+          while (conditionalStack.length > 0 &&
+                 conditionalStack[conditionalStack.length - 1] >= origIndent) {
+            conditionalStack.pop();
+          }
+        }
+        const headerIndent = conditionalStack.length > 0
+          ? conditionalStack[conditionalStack.length - 1] + INDENT.length
+          : insideBlock ? INDENT.length : 0;
+        conditionalStack.push(headerIndent);
+        desired = headerIndent > 0 ? " ".repeat(headerIndent) + stripped : stripped;
+      } else if (RE_REPEAT.test(stripped) || RE_FOR_EACH.test(stripped) || RE_WHILE.test(stripped)) {
+        // Loop headers — same nesting logic as IF
         if (origIndent > 0) {
           while (conditionalStack.length > 0 &&
                  conditionalStack[conditionalStack.length - 1] >= origIndent) {

@@ -528,4 +528,150 @@ describe('validateHuntDocument', () => {
     expect(diagnostics).toHaveLength(1)
     expect(diagnostics[0].code).toBe('orphaned-branch')
   })
+
+  it('accepts well-formed REPEAT loop without diagnostics', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: Retry',
+      '    REPEAT 3 TIMES:',
+      "        CLICK the 'Refresh' button",
+      "        VERIFY that 'Data' is present",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toEqual([])
+  })
+
+  it('accepts well-formed FOR EACH loop without diagnostics', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: Add users',
+      '    FOR EACH {user} IN {users}:',
+      "        Fill 'Name' field with '{user}'",
+      "        CLICK the 'Add' button",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toEqual([])
+  })
+
+  it('accepts well-formed WHILE loop without diagnostics', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: Pagination',
+      "    WHILE button 'Next' exists:",
+      "        CLICK the 'Next' button",
+      "        WAIT 1",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toEqual([])
+  })
+
+  it('reports REPEAT loop missing trailing colon', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: Broken',
+      '    REPEAT 3 TIMES',
+      "        CLICK the 'X' button",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('invalid-loop')
+    expect(diagnostics[0].message).toContain('REPEAT')
+  })
+
+  it('reports FOR EACH loop missing trailing colon', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: Broken',
+      '    FOR EACH {item} IN {items}',
+      "        CLICK the 'X' button",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('invalid-loop')
+    expect(diagnostics[0].message).toContain('FOR EACH')
+  })
+
+  it('reports WHILE loop missing trailing colon', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: Broken',
+      "    WHILE button 'Next' exists",
+      "        CLICK the 'Next' button",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('invalid-loop')
+    expect(diagnostics[0].message).toContain('WHILE')
+  })
+
+  it('accepts nested loops inside conditionals', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: Complex flow',
+      "    IF button 'Load More' exists:",
+      '        REPEAT 5 TIMES:',
+      "            CLICK the 'Load More' button",
+      "            WAIT 1",
+      "    ELSE:",
+      "        VERIFY that 'All loaded' is present",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toEqual([])
+  })
+
+  it('accepts nested conditionals inside loops', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: Adaptive loop',
+      '    REPEAT 3 TIMES:',
+      "        IF button 'Skip' exists:",
+      "            CLICK the 'Skip' button",
+      "        ELSE:",
+      "            CLICK the 'Next' button",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toEqual([])
+  })
+
+  it('reports orphaned ELIF after a loop header', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: Bad branch after loop',
+      '    REPEAT 3 TIMES:',
+      "        CLICK the 'Retry' button",
+      '    ELIF text \'Error\' is present:',
+      "        VERIFY that 'Error' is present",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('orphaned-branch')
+    expect(diagnostics[0].message).toContain('ELIF must follow')
+  })
+
+  it('reports orphaned ELSE after a loop header', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: Bad branch after loop',
+      '    WHILE button \'Next\' exists:',
+      "        CLICK the 'Next' button",
+      '    ELSE:',
+      "        VERIFY that 'Done' is present",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('orphaned-branch')
+    expect(diagnostics[0].message).toContain('ELSE must follow')
+  })
+
+  it('rejects empty-condition WHILE header', () => {
+    const diagnostics = validateHuntDocument([
+      'STEP 1: Empty while',
+      '    WHILE :',
+      "        CLICK the 'X' button",
+      'DONE.',
+    ].join('\n'))
+
+    expect(diagnostics).toHaveLength(1)
+    expect(diagnostics[0].code).toBe('invalid-command')
+  })
 })

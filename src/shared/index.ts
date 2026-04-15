@@ -2,7 +2,7 @@
 // Extension-local runtime contracts, parsers, and validators
 // ---------------------------------------------------------------------------
 
-export const MIN_MANUL_ENGINE_VERSION = '0.0.9.28'
+export const MIN_MANUL_ENGINE_VERSION = '0.0.9.29'
 
 export type StepStatus = 'pending' | 'running' | 'pass' | 'fail' | 'skipped'
 
@@ -65,11 +65,14 @@ export {
   RE_DONE,
   RE_ELIF,
   RE_ELSE,
+  RE_FOR_EACH,
   RE_HOOK_CLOSE,
   RE_HOOK_OPEN,
   RE_IF,
   RE_METADATA,
+  RE_REPEAT,
   RE_STEP,
+  RE_WHILE,
   isValidHuntActionLine,
   validateHuntDocument,
 } from './huntValidator'
@@ -221,6 +224,9 @@ export const MANUL_DSL_COMMANDS: ManulDslCommand[] = [
   { id: 'if-block',               label: 'IF',                    icon: '🔀', uiText: "IF button 'Save' exists:",                                            snippet: "IF ${1:condition}:\n        ${2:action}",                                     description: 'Block-style conditional branching with indented body.',                                  example: "IF button 'Save' exists:\n        CLICK the 'Save' button" },
   { id: 'elif-block',             label: 'ELIF',                  icon: '🔀', uiText: "ELIF text 'Error' is present:",                                       snippet: "ELIF ${1:condition}:\n        ${2:action}",                                   description: 'Alternative branch in an IF block.',                                                    example: "ELIF text 'Error' is present:\n        VERIFY that 'Error' is present" },
   { id: 'else-block',             label: 'ELSE',                  icon: '🔀', uiText: 'ELSE:',                                                               snippet: "ELSE:\n        ${1:action}",                                                  description: 'Default branch in an IF block.',                                                        example: "ELSE:\n        VERIFY that 'Fallback' is present" },
+  { id: 'repeat-loop',            label: 'REPEAT',                icon: '🔁', uiText: 'REPEAT 3 TIMES:',                                                     snippet: "REPEAT ${1:N} TIMES:\n        ${2:action}",                                   description: 'Fixed-count loop with {i} counter (1-based). Body indented by 4 extra spaces.',         example: "REPEAT 3 TIMES:\n        CLICK the 'Next' button" },
+  { id: 'for-each-loop',          label: 'FOR EACH',              icon: '🔁', uiText: 'FOR EACH {item} IN {items}:',                                         snippet: "FOR EACH {${1:var}} IN {${2:collection}}:\n        ${3:action}",              description: 'Iterate over comma-separated values from a variable.',                                   example: "FOR EACH {user} IN {users}:\n        Fill 'Name' field with '{user}'" },
+  { id: 'while-loop',             label: 'WHILE',                 icon: '🔁', uiText: "WHILE button 'Next' exists:",                                          snippet: "WHILE ${1:condition}:\n        ${2:action}",                                  description: 'Repeat while condition is true (max 100 iterations).',                                   example: "WHILE button 'Next' exists:\n        CLICK the 'Next' button" },
 ]
 
 export function compareVersions(a: string, b: string): number {

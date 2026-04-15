@@ -280,4 +280,118 @@ describe('HuntDocumentFormatter', () => {
     }
     expect(lines).toEqual(expected)
   })
+
+  it('formats REPEAT loop headers at 4 spaces and body lines at 8 spaces', () => {
+    const code = [
+      'STEP 1: Retry logic',
+      'REPEAT 3 TIMES:',
+      "CLICK the 'Refresh' button",
+      "VERIFY that 'Data loaded' is present",
+      'DONE.',
+    ].join('\n')
+
+    const doc = new MockTextDocument(code)
+    const formatter = new HuntDocumentFormatter()
+    const edits = formatter.provideDocumentFormattingEdits(doc as any, {} as any, {} as any)
+
+    const expected = [
+      'STEP 1: Retry logic',
+      '    REPEAT 3 TIMES:',
+      "        CLICK the 'Refresh' button",
+      "        VERIFY that 'Data loaded' is present",
+      'DONE.',
+    ]
+
+    const lines = code.split('\n')
+    for (const edit of edits) {
+      lines[(edit.range as any).startLine] = edit.newText
+    }
+    expect(lines).toEqual(expected)
+  })
+
+  it('formats FOR EACH loop headers at 4 spaces and body lines at 8 spaces', () => {
+    const code = [
+      'STEP 1: Add users',
+      'FOR EACH {user} IN {users}:',
+      "Fill 'Name' field with '{user}'",
+      "CLICK the 'Add' button",
+      'DONE.',
+    ].join('\n')
+
+    const doc = new MockTextDocument(code)
+    const formatter = new HuntDocumentFormatter()
+    const edits = formatter.provideDocumentFormattingEdits(doc as any, {} as any, {} as any)
+
+    const expected = [
+      'STEP 1: Add users',
+      '    FOR EACH {user} IN {users}:',
+      "        Fill 'Name' field with '{user}'",
+      "        CLICK the 'Add' button",
+      'DONE.',
+    ]
+
+    const lines = code.split('\n')
+    for (const edit of edits) {
+      lines[(edit.range as any).startLine] = edit.newText
+    }
+    expect(lines).toEqual(expected)
+  })
+
+  it('formats WHILE loop headers at 4 spaces and body lines at 8 spaces', () => {
+    const code = [
+      'STEP 1: Pagination',
+      "WHILE button 'Next' exists:",
+      "CLICK the 'Next' button",
+      "WAIT 1",
+      'DONE.',
+    ].join('\n')
+
+    const doc = new MockTextDocument(code)
+    const formatter = new HuntDocumentFormatter()
+    const edits = formatter.provideDocumentFormattingEdits(doc as any, {} as any, {} as any)
+
+    const expected = [
+      'STEP 1: Pagination',
+      "    WHILE button 'Next' exists:",
+      "        CLICK the 'Next' button",
+      "        WAIT 1",
+      'DONE.',
+    ]
+
+    const lines = code.split('\n')
+    for (const edit of edits) {
+      lines[(edit.range as any).startLine] = edit.newText
+    }
+    expect(lines).toEqual(expected)
+  })
+
+  it('formats nested loop inside IF block', () => {
+    const code = [
+      'STEP 1: Nested',
+      "    IF 'results' is present:",
+      "        REPEAT 5 TIMES:",
+      "            SCROLL DOWN",
+      "        VERIFY that 'Footer' is present",
+      'DONE.',
+    ].join('\n')
+
+    const doc = new MockTextDocument(code)
+    const formatter = new HuntDocumentFormatter()
+    const edits = formatter.provideDocumentFormattingEdits(doc as any, {} as any, {} as any)
+
+    const expected = [
+      'STEP 1: Nested',
+      "    IF 'results' is present:",
+      "        REPEAT 5 TIMES:",
+      "            SCROLL DOWN",
+      "        VERIFY that 'Footer' is present",
+      'DONE.',
+    ]
+
+    const lines = code.split('\n')
+    for (const edit of edits) {
+      lines[(edit.range as any).startLine] = edit.newText
+    }
+    expect(lines).toEqual(expected)
+  })
 })

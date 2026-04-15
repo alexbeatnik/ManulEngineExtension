@@ -177,6 +177,7 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
     .checkbox-row label { margin-top: 0; }
     .hint { font-size: 0.85em; color: var(--vscode-descriptionForeground); margin-top: 2px; }
     .btn-row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+    .btn-row-sticky { position: sticky; bottom: 0; padding: 8px 0; background: var(--vscode-sideBar-background, var(--vscode-editor-background)); z-index: 1; border-top: 1px solid var(--vscode-widget-border, transparent); }
     button {
       padding: 5px 12px; border: none; border-radius: 3px; cursor: pointer;
       background: var(--vscode-button-background);
@@ -361,7 +362,7 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
       </div>
       <div class="hint">Print detailed per-channel heuristic score breakdown for each element resolution.</div>
 
-      <div class="btn-row">
+      <div class="btn-row btn-row-sticky">
         <button id="btn-save">💾 Save</button>
         <button id="btn-open" class="secondary">Open in Editor</button>
       </div>
