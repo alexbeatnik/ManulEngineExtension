@@ -386,7 +386,7 @@
       "label": "WHILE",
       "uiText": "WHILE button 'Next' exists:",
       "snippet": "WHILE ${1:condition}:\n        ${2:action}",
-      "regex": "^\\s*(?:\\d+\\.\\s*)?WHILE\\b.+:\\s*$",
+      "regex": "^\\s*(?:\\d+\\.\\s*)?WHILE\\b.*[^\\s:].*:\\s*$",
       "description": "Repeat while condition is true. Uses same conditions as IF blocks. Safety limit: 100 iterations. {i} counter auto-set. Nesting supported.",
       "category": "control_flow"
     }
