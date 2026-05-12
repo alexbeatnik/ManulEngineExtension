@@ -1,8 +1,8 @@
 {
   "name": "manul-engine",
   "displayName": "ManulEngine",
-  "description": "Write browser automation in plain English. ManulEngine interprets .hunt files through deterministic DOM heuristics on top of Playwright — no selectors, no cloud APIs, no AI required.",
-  "version": "0.0.929",
+  "description": "Write browser automation in plain English. ManulEngine & ManulHeart extension for VS Code — deterministic DOM heuristics, no selectors, no cloud APIs, no AI required.",
+  "version": "0.9.30",
   "publisher": "manul-engine",
   "icon": "images/icon128.png",
   "repository": {
@@ -162,8 +162,8 @@
         "title": "ManulEngine: Insert [TEARDOWN] Block"
       },
       {
-        "command": "manul.insertInlinePythonCall",
-        "title": "ManulEngine: Insert Inline CALL PYTHON Step"
+        "command": "manul.insertInlineCall",
+        "title": "ManulEngine: Insert Inline CALL Step"
       },
       {
         "command": "manul.generateConfig",

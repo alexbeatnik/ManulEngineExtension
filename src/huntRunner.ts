@@ -4,7 +4,8 @@ import * as os from "os";
 import { execFile, spawn, ChildProcess } from "child_process";
 import * as vscode from "vscode";
 import { PAUSE_MARKER, EXPLAIN_NEXT_MARKER, DEBUG_TERMINAL_NAME, PYTHON_ENV_FLAGS, getConfigFileName } from "./constants";
-import { MIN_MANUL_ENGINE_VERSION, parseVersion, ExplainNextResult } from "./shared";
+import { MIN_MANUL_ENGINE_VERSION, MIN_MANUL_HEART_VERSION, parseVersion, ExplainNextResult } from "./shared";
+import { detectRuntimeType, ManulRuntimeType } from "./runtimeDetector";
 
 /**
  * Quote a single argument for safe use inside a terminal send-text command.
@@ -28,25 +29,33 @@ function quoteShellArg(arg: string, psMode: boolean): string {
 
 /**
  * Run `manulExe --version`, parse the reported version, and compare it
- * against MIN_MANUL_ENGINE_VERSION.  Returns a user-facing warning string
- * when the installed version is too old; undefined when the version is
- * acceptable or cannot be determined (e.g. old engine without --version).
+ * against the minimum version for the detected runtime.  Returns a user-facing
+ * warning string when the installed version is too old; undefined when the
+ * version is acceptable or cannot be determined.
  */
-export async function checkManulEngineVersion(manulExe: string): Promise<string | undefined> {
+export async function checkManulEngineVersion(manulExe: string, runtimeType?: ManulRuntimeType): Promise<string | undefined> {
   return new Promise<string | undefined>((resolve) => {
     execFile(manulExe, ['--version'], { timeout: 5000 }, (_err, stdout) => {
       const match = stdout.trim().match(/(\d+(?:\.\d+)+)/);
       if (!match) { resolve(undefined); return; }
       const installed = match[1];
       const iv = parseVersion(installed);
-      const mv = parseVersion(MIN_MANUL_ENGINE_VERSION);
+
+      const isGo = runtimeType === 'go' || stdout.toLowerCase().includes('heart');
+      const minVersion = isGo ? MIN_MANUL_HEART_VERSION : MIN_MANUL_ENGINE_VERSION;
+      const installHint = isGo
+        ? `Run: go build -o manul ./cmd/manul`
+        : `Run: pip install --upgrade "manul-engine==${MIN_MANUL_ENGINE_VERSION}"`;
+      const productName = isGo ? 'ManulHeart' : 'ManulEngine';
+
+      const mv = parseVersion(minVersion);
       for (let i = 0; i < Math.max(iv.length, mv.length); i++) {
         const a = iv[i] ?? 0;
         const b = mv[i] ?? 0;
         if (a < b) {
           resolve(
-            `v${installed} is installed but this extension requires exactly v${MIN_MANUL_ENGINE_VERSION}. ` +
-            `Run: pip install --upgrade "manul-engine==${MIN_MANUL_ENGINE_VERSION}"`
+            `v${installed} is installed but this extension requires ${productName} >= v${minVersion}. ` +
+            installHint
           );
           return;
         }

@@ -14,20 +14,21 @@ import { spawn } from "child_process";
 import { MANUL_DSL_COMMANDS } from "./shared";
 import { findManulExecutable } from "./huntRunner";
 import { getConfigFileName, TERMINAL_NAME } from "./constants";
+import { detectRuntimeType, ManulRuntimeType } from "./runtimeDetector";
 
 const RECORDER_TERMINAL_NAME = `${TERMINAL_NAME} (Recorder)`;
 
-// ── Hook scaffold constants ──────────────────────────────────────────────────
+// ── Hook scaffold helpers ──────────────────────────────────────────────────
 
-const SETUP_SCAFFOLD = `[SETUP]
-    PRINT "Preparing setup"
-    CALL PYTHON module_name.function_name
-[END SETUP]`;
+function getSetupScaffold(runtimeType: ManulRuntimeType): string {
+  const call = runtimeType === 'go' ? 'CALL GO package_name.function_name' : 'CALL PYTHON module_name.function_name';
+  return `[SETUP]\n    PRINT "Preparing setup"\n    ${call}\n[END SETUP]`;
+}
 
-const TEARDOWN_SCAFFOLD = `[TEARDOWN]
-    PRINT "Cleaning up"
-    CALL PYTHON module_name.function_name
-[END TEARDOWN]`;
+function getTeardownScaffold(runtimeType: ManulRuntimeType): string {
+  const call = runtimeType === 'go' ? 'CALL GO package_name.function_name' : 'CALL PYTHON module_name.function_name';
+  return `[TEARDOWN]\n    PRINT "Cleaning up"\n    ${call}\n[END TEARDOWN]`;
+}
 
 // STEP_TEMPLATES removed — buttons are now generated from the extension-local MANUL_DSL_COMMANDS registry.
 
@@ -737,11 +738,14 @@ export async function insertSetupCommand(): Promise<void> {
       vscode.window.showWarningMessage("A [SETUP] block already exists in this file.");
       return;
     }
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
+    const workspaceRoot = workspaceFolder?.uri.fsPath ?? path.dirname(editor.document.uri.fsPath);
+    const runtimeType = await detectRuntimeType(workspaceRoot);
     const cursor = editor.selection.active;
     const lineStart = new vscode.Position(cursor.line, 0);
     const prefix = cursor.line > 0 ? "\n" : "";
     const ok = await editor.edit((eb) => {
-      eb.insert(lineStart, `${prefix}${SETUP_SCAFFOLD}\n`);
+      eb.insert(lineStart, `${prefix}${getSetupScaffold(runtimeType)}\n`);
     });
     if (!ok) {
       vscode.window.showWarningMessage("Could not insert [SETUP] block — document may be read-only.");
@@ -760,11 +764,14 @@ export async function insertTeardownCommand(): Promise<void> {
       vscode.window.showWarningMessage("A [TEARDOWN] block already exists in this file.");
       return;
     }
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
+    const workspaceRoot = workspaceFolder?.uri.fsPath ?? path.dirname(editor.document.uri.fsPath);
+    const runtimeType = await detectRuntimeType(workspaceRoot);
     const cursor = editor.selection.active;
     const lineStart = new vscode.Position(cursor.line, 0);
     const prefix = cursor.line > 0 ? "\n" : "";
     const ok = await editor.edit((eb) => {
-      eb.insert(lineStart, `${prefix}${TEARDOWN_SCAFFOLD}\n`);
+      eb.insert(lineStart, `${prefix}${getTeardownScaffold(runtimeType)}\n`);
     });
     if (!ok) {
       vscode.window.showWarningMessage("Could not insert [TEARDOWN] block — document may be read-only.");
@@ -773,12 +780,20 @@ export async function insertTeardownCommand(): Promise<void> {
 }
 
 /**
- * Insert a numbered `CALL PYTHON module_name.function_name` step at the end
+ * Insert a numbered runtime-specific CALL step at the end
  * of the active .hunt file (same behaviour as the Step Builder buttons).
- * Registered as `manul.insertInlinePythonCall`.
+ * Registered as `manul.insertInlineCall`.
  */
-export async function insertInlinePythonCallCommand(): Promise<void> {
-  await insertStep('CALL PYTHON ${1:module}.${2:function}${3: with args: "${4:arg}"}${5: into {${6:result}}}');
+export async function insertInlineCallCommand(): Promise<void> {
+  await _withHuntEditor(async (editor) => {
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
+    const workspaceRoot = workspaceFolder?.uri.fsPath ?? path.dirname(editor.document.uri.fsPath);
+    const runtimeType = await detectRuntimeType(workspaceRoot);
+    const snippet = runtimeType === 'go'
+      ? 'CALL GO ${1:package}.${2:function}${3: with args: "${4:arg}"}${5: into {${6:result}}}'
+      : 'CALL PYTHON ${1:module}.${2:function}${3: with args: "${4:arg}"}${5: into {${6:result}}}';
+    await insertStep(snippet);
+  });
 }
 
 /**

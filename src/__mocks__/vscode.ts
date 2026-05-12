@@ -11,6 +11,10 @@ export const workspace = {
   getConfiguration: (_section?: string) => ({
     get: <T>(_key: string, defaultValue?: T): T | undefined => defaultValue,
   }),
+  getWorkspaceFolder: (uri: any) => {
+    if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) return undefined;
+    return workspace.workspaceFolders.find((wf: any) => uri.fsPath.startsWith(wf.uri.fsPath)) ?? workspace.workspaceFolders[0];
+  },
 }
 
 export const languages = {

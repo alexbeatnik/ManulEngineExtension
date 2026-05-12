@@ -60,6 +60,7 @@ const PRESS_RE = new RegExp(
   'i',
 )
 const CALL_PYTHON_TARGET_RE = /^(\{[A-Za-z_]\w*\}(\.[A-Za-z_]\w*)?|[A-Za-z_]\w*(\.[A-Za-z_]\w*)+)(?=\s|$)/i
+const CALL_GO_TARGET_RE = /^(\{[A-Za-z_]\w*\}(\.[A-Za-z_]\w*)?|[A-Za-z_]\w*(\.[A-Za-z_]\w*)+)(?=\s|$)/i
 const CONTEXTUAL_SUFFIX_RE = new RegExp(
   String.raw`\s+(?:NEAR\s+${QUOTED_FRAGMENT_PATTERN}|ON\s+(HEADER|FOOTER)|INSIDE\s+${QUOTED_FRAGMENT_PATTERN}\s+row\s+with\s+${QUOTED_FRAGMENT_PATTERN})\s*$`,
   'i',
@@ -141,6 +142,16 @@ function isCallPythonLine(line: string): boolean {
   }
 
   return CALL_PYTHON_TARGET_RE.test(match[1].trim())
+}
+
+function isCallGoLine(line: string): boolean {
+  const normalized = normalizeActionLine(line)
+  const match = normalized.match(/^CALL\s+GO\s+(.+)$/i)
+  if (!match) {
+    return false
+  }
+
+  return CALL_GO_TARGET_RE.test(match[1].trim())
 }
 
 function isPrintLine(line: string): boolean {
@@ -269,12 +280,19 @@ function isDebugLine(line: string): boolean {
   return /^(DEBUG|PAUSE)$/i.test(normalizeActionLine(line))
 }
 
-export function isValidHuntActionLine(line: string, options: { insideHookBlock?: boolean } = {}): boolean {
-  if (options.insideHookBlock) {
-    return isPrintLine(line) || isCallPythonLine(line)
+export function isValidHuntActionLine(line: string, options: { insideHookBlock?: boolean; runtimeType?: 'python' | 'go' | 'unknown' } = {}): boolean {
+  const hookCalls: ((l: string) => boolean)[] = [isPrintLine]
+  if (options.runtimeType === 'go') {
+    hookCalls.push(isCallGoLine)
+  } else {
+    hookCalls.push(isCallPythonLine)
   }
 
-  return [
+  if (options.insideHookBlock) {
+    return hookCalls.some((validate) => validate(line))
+  }
+
+  const validators: ((l: string) => boolean)[] = [
     isNavigateLine,
     isOpenAppLine,
     isClickLikeLine,
@@ -295,11 +313,18 @@ export function isValidHuntActionLine(line: string, options: { insideHookBlock?:
     isUploadLine,
     isMockLine,
     isScanPageLine,
-    isCallPythonLine,
     isSetLine,
     isDebugVarsLine,
     isDebugLine,
-  ].some((validate) => validate(line))
+  ]
+
+  if (options.runtimeType === 'go') {
+    validators.push(isCallGoLine)
+  } else {
+    validators.push(isCallPythonLine)
+  }
+
+  return validators.some((validate) => validate(line))
 }
 
 function makeDiagnostic(
@@ -329,7 +354,7 @@ function indentLevel(line: string): number {
   return match ? match[1].length : 0
 }
 
-export function validateHuntDocument(content: string): HuntValidationDiagnostic[] {
+export function validateHuntDocument(content: string, runtimeType: 'python' | 'go' | 'unknown' = 'unknown'): HuntValidationDiagnostic[] {
   const diagnostics: HuntValidationDiagnostic[] = []
   const lines = content.split(/\r?\n/)
   let hookState: HookBlockState | null = null
@@ -511,13 +536,13 @@ export function validateHuntDocument(content: string): HuntValidationDiagnostic[
       }
     }
 
-    if (!isValidHuntActionLine(line, { insideHookBlock: Boolean(hookState) })) {
+    if (!isValidHuntActionLine(line, { insideHookBlock: Boolean(hookState), runtimeType })) {
       diagnostics.push(
         makeDiagnostic(
           lineNumber,
           line,
           hookState
-            ? 'Unsupported hook block command. Only PRINT and CALL PYTHON are allowed inside hook blocks.'
+            ? 'Unsupported hook block command. Only PRINT and runtime-specific CALL statements are allowed inside hook blocks.'
             : 'Unknown or malformed Manul DSL command.',
           hookState ? 'invalid-hook-block' : 'invalid-command',
         ),

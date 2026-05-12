@@ -2,7 +2,8 @@
 // Extension-local runtime contracts, parsers, and validators
 // ---------------------------------------------------------------------------
 
-export const MIN_MANUL_ENGINE_VERSION = '0.0.9.29'
+export const MIN_MANUL_ENGINE_VERSION = '0.0.9.30'
+export const MIN_MANUL_HEART_VERSION = '0.0.1.1'
 
 export type StepStatus = 'pending' | 'running' | 'pass' | 'fail' | 'skipped'
 
@@ -102,6 +103,8 @@ export interface ManulDslCommand {
   example: string
   /** Optional note about element-type hints being recommended but not required. */
   hintNote?: string
+  /** Runtime restriction — 'python' | 'go' | undefined (all runtimes). */
+  runtime?: 'python' | 'go'
 }
 
 export type ManulDslContextKeyword = 'NEAR' | 'ON' | 'INSIDE' | 'WITH'
@@ -215,7 +218,8 @@ export const MANUL_DSL_COMMANDS: ManulDslCommand[] = [
   { id: 'upload-file',           label: 'Upload File',           icon: '📎', uiText: "UPLOAD '' to ''",                                                  snippet: "UPLOAD '${1:file_path}' to '${2:target}'",                                    description: 'Uploads a local file to a file-input element.',                                         example: "UPLOAD 'fixtures/avatar.png' to 'Profile photo'" },
   { id: 'mock-request',          label: 'Mock Request',          icon: '🎭', uiText: "MOCK GET \"\" with ''",                                             snippet: "MOCK ${1|GET,POST,PUT,PATCH,DELETE|} \"${2:url_pattern}\" with '${3:mock_file}'", description: 'Intercepts matching network requests and fulfills them from a local mock file.',       example: "MOCK GET \"/api/profile\" with 'mocks/profile.json'" },
   { id: 'scan-page',             label: 'Scan Page',             icon: '🔍', uiText: 'SCAN PAGE',                                                         snippet: 'SCAN PAGE${1: into {${2:filename}}}',                                         description: 'Scans the current page for interactive elements and optionally writes a draft file.',    example: 'SCAN PAGE into {draft.hunt}' },
-  { id: 'call-python',           label: 'Call Python',           icon: '🐍', uiText: 'CALL PYTHON module.function',                                      snippet: 'CALL PYTHON ${1:module}.${2:function}${3: with args: "${4:arg}"}${5: into {${6:result}}}', description: 'Executes a synchronous Python helper inline with dotted imports or @script aliases, plus optional arguments and capture.', example: 'CALL PYTHON {auth}.issue_token with args: "{email}" into {token}' },
+  { id: 'call-python',           label: 'Call Python',           icon: '🐍', uiText: 'CALL PYTHON module.function',                                      snippet: 'CALL PYTHON ${1:module}.${2:function}${3: with args: "${4:arg}"}${5: into {${6:result}}}', description: 'Executes a synchronous Python helper inline with dotted imports or @script aliases, plus optional arguments and capture.', example: 'CALL PYTHON {auth}.issue_token with args: "{email}" into {token}', runtime: 'python' as const },
+  { id: 'call-go',               label: 'Call Go',               icon: '🐹', uiText: 'CALL GO package.function',                                         snippet: 'CALL GO ${1:package}.${2:function}${3: with args: "${4:arg}"}${5: into {${6:result}}}', description: 'Invokes a registered Go function via the ManulHeart extension API.',                      example: 'CALL GO helpers.seed_user with args: "{email}" into {token}', runtime: 'go' as const },
   { id: 'set-variable',          label: 'Set Variable',          icon: '📝', uiText: 'SET {variable} = value',                                            snippet: 'SET {${1:variable}} = ${2:value}',                                             description: 'Sets or updates a runtime variable for later placeholder substitution.',                 example: 'SET {environment} = staging' },
   { id: 'debug',                 label: 'Debug',                 icon: '🐛', uiText: 'DEBUG',                                                            snippet: 'DEBUG',                                                                       description: 'Pauses execution at this step in interactive debug flows.',                              example: 'DEBUG' },
   { id: 'debug-vars',            label: 'Debug Vars',            icon: '🔬', uiText: 'DEBUG VARS',                                                       snippet: 'DEBUG VARS',                                                                  description: 'Prints the current state of all runtime variables.',                                     example: 'DEBUG VARS' },
@@ -228,6 +232,16 @@ export const MANUL_DSL_COMMANDS: ManulDslCommand[] = [
   { id: 'for-each-loop',          label: 'FOR EACH',              icon: '🔁', uiText: 'FOR EACH {item} IN {items}:',                                         snippet: "FOR EACH {${1:var}} IN {${2:collection}}:\n        ${3:action}",              description: 'Iterate over comma-separated values from a variable.',                                   example: "FOR EACH {user} IN {users}:\n        Fill 'Name' field with '{user}'" },
   { id: 'while-loop',             label: 'WHILE',                 icon: '🔁', uiText: "WHILE button 'Next' exists:",                                          snippet: "WHILE ${1:condition}:\n        ${2:action}",                                  description: 'Repeat while condition is true (max 100 iterations).',                                   example: "WHILE button 'Next' exists:\n        CLICK the 'Next' button" },
 ]
+
+export function getManulDslCommands(runtimeType: 'python' | 'go' | 'unknown' = 'unknown'): ManulDslCommand[] {
+  if (runtimeType === 'unknown') {
+    return MANUL_DSL_COMMANDS
+  }
+  return MANUL_DSL_COMMANDS.filter((cmd) => {
+    const rt = (cmd as unknown as Record<string, string>).runtime
+    return !rt || rt === runtimeType
+  })
+}
 
 export function compareVersions(a: string, b: string): number {
   const pa = parseVersion(a)

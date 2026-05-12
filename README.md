@@ -2,7 +2,7 @@
     <img src="images/icon128.png" alt="ManulEngine Extension" width="128" />
 </p>
 
-# ManulEngine — VS Code Extension
+# ManulEngine & ManulHeart — VS Code Extension
 
 [![Manul Engine Extension](https://img.shields.io/visual-studio-marketplace/v/manul-engine.manul-engine?label=Manul%20Engine%20Extension&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-engine)
 [![Manul Engine Extension (Open VSX)](https://img.shields.io/open-vsx/v/manul-engine/manul-engine?label=Open%20VSX&logo=eclipse-ide)](https://open-vsx.org/extension/manul-engine/manul-engine)
@@ -14,6 +14,8 @@
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-d97706)](#status)
 
 Write browser automation in plain English. Run it, debug it, and understand every decision the engine makes — all without leaving VS Code.
+
+> **Dual runtime support.** This extension works with both **ManulEngine** (Python + Playwright) and **ManulHeart** (Go + CDP). It auto-detects which runtime your workspace uses by inspecting `go.mod`, `pyproject.toml`, or the `manul --version` output string.
 
 > **Alpha.** Solo-developed and actively battle-tested. Feature-rich, not yet hardened across every edge case. The goal is transparent execution and strong debugging ergonomics, not inflated claims.
 
@@ -35,9 +37,17 @@ Write browser automation in plain English. Run it, debug it, and understand ever
 
 ### 1. Install the runtime
 
+**ManulEngine (Python + Playwright):**
+
 ```bash
-pip install manul-engine==0.0.9.29
+pip install manul-engine==0.0.9.30
 playwright install chromium
+```
+
+**ManulHeart (Go + CDP):**
+
+```bash
+go build -o manul ./cmd/manul   # or: make build && make install
 ```
 
 ### 2. Install the extension
@@ -71,6 +81,9 @@ Click `▶` in the editor title bar — or right-click the file → *ManulEngine
 manul tests/hello.hunt
 manul tests/                       # run every .hunt in the directory
 manul --headless --html-report tests/
+
+# ManulHeart only: run with existing Chrome
+manul tests/hello.hunt --cdp http://127.0.0.1:9222
 ```
 
 ---
@@ -173,7 +186,9 @@ The **Cache** sidebar tree shows per-site entries from ManulEngine's persistent 
 
 ### Custom controls
 
-Some UI widgets defy heuristic targeting — React virtual tables, canvas datepickers, WebGL overlays. **Custom Controls** let SDETs write Playwright Python while the hunt file stays plain English.
+Some UI widgets defy heuristic targeting — React virtual tables, canvas datepickers, WebGL overlays. **Custom Controls** let SDETs write Playwright Python (ManulEngine) or Go (ManulHeart) while the hunt file stays plain English.
+
+**ManulEngine (Python):**
 
 ```python
 # controls/booking.py
@@ -184,6 +199,21 @@ async def handle_datepicker(page, action_type, value):
     await page.locator(".react-datepicker__input-container input").fill(value or "")
 ```
 
+**ManulHeart (Go):**
+
+```go
+// controls/booking.go
+package controls
+
+import "github.com/manulengineer/manulheart/pkg/runtime"
+
+func init() {
+    runtime.RegisterCustomControl("Checkout Page", "React Datepicker", func(ctx runtime.ControlContext) error {
+        return ctx.Page.Fill(".react-datepicker__input-container input", ctx.Value)
+    })
+}
+```
+
 The hunt file stays unchanged:
 
 ```text
@@ -192,7 +222,7 @@ FILL 'React Datepicker' with '2026-12-25'
 
 Debug breakpoints, Test Explorer, and live output streaming work identically whether a step hits a custom control or the standard heuristic pipeline.
 
-> **Team workflow:** QA authors keep writing plain English. SDETs own the `controls/` directory. The hunt file never changes when the Playwright logic evolves.
+> **Team workflow:** QA authors keep writing plain English. SDETs own the `controls/` directory. The hunt file never changes when the underlying logic evolves.
 
 ---
 
@@ -311,7 +341,8 @@ STEP 3: Retry checkout
 | Component | Role | Links |
 |-----------|------|-------|
 | **ManulEngine** | Deterministic automation runtime (Python). Heuristic element resolver, `.hunt` DSL, CLI runner. | [PyPI](https://pypi.org/project/manul-engine/) · [GitHub](https://github.com/alexbeatnik/ManulEngine) |
-| **Manul Engine Extension** | VS Code extension for ManulEngine with debug panel, explain mode, and Test Explorer integration. | [Marketplace](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-engine) · [Open VSX](https://open-vsx.org/extension/manul-engine/manul-engine) · [GitHub](https://github.com/alexbeatnik/ManulEngineExtension) |
+| **ManulHeart** | Deterministic automation runtime (Go). CDP-based, zero external dependencies, goroutine parallelism. | [GitHub](https://github.com/alexbeatnik/ManulHeart) |
+| **Manul Engine Extension** | VS Code extension for ManulEngine & ManulHeart with debug panel, explain mode, and Test Explorer integration. | [Marketplace](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-engine) · [Open VSX](https://open-vsx.org/extension/manul-engine/manul-engine) · [GitHub](https://github.com/alexbeatnik/ManulEngineExtension) |
 | **ManulMcpServer** | MCP bridge that gives Copilot Chat and other agents access to ManulEngine. | [Marketplace](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-mcp-server) · [Open VSX](https://open-vsx.org/extension/manul-engine/manul-mcp-server) · [GitHub](https://github.com/alexbeatnik/ManulMcpServer) |
 | **ManulAI Local Agent** | Autonomous AI agent for browser automation, powered by ManulEngine. | [Marketplace](https://marketplace.visualstudio.com/items?itemName=manul-engine.manulai-local-agent) · [Open VSX](https://open-vsx.org/extension/manul-engine/manulai-local-agent) · [GitHub](https://github.com/alexbeatnik/ManulAI-local-agent) |
 
@@ -341,12 +372,23 @@ Try the extension. [File an issue](https://github.com/alexbeatnik/ManulEngineExt
 
 ---
 
-## What's New in 0.0.9.29
+## What's New in 0.9.30
+
+- **Dual runtime support — ManulEngine (Python) + ManulHeart (Go).** The extension auto-detects which runtime a workspace uses via `go.mod` / `pyproject.toml` heuristics and the `manul --version` output string.
+- **Runtime-aware DSL commands.** `CALL PYTHON` is hidden and `CALL GO` is surfaced when a Go workspace is detected. Hook block scaffolds, inline-call snippets, and validator diagnostics all adapt automatically.
+- **Runtime-aware doctor command.** `Manul Doctor` now checks for Go / ManulHeart when a Go workspace is open, and Python / Playwright / ManulEngine for Python workspaces.
+- **Version check covers both runtimes.** Minimum versions: ManulEngine `0.0.9.30`, ManulHeart `0.0.1.1`.
+- Bumped extension manifest to `0.9.30`.
+
+<details>
+<summary>0.0.9.29</summary>
 
 - Bumped extension manifest to `0.0.929` and pinned ManulEngine runtime to `0.0.9.29`.
 - Added `REPEAT N TIMES:`, `FOR EACH {var} IN {collection}:`, `WHILE <condition>:` loop constructs — syntax highlighting, formatter indentation, validator diagnostics, Step Builder buttons, autocomplete.
 - Updated Ecosystem section with full component table and additional badges (Open VSX, ManulAI Local Agent).
 - Updated `src/shared/manul-dsl-contract.json` from engine.
+
+</details>
 
 <details>
 <summary>0.0.9.28</summary>
@@ -376,6 +418,6 @@ Try the extension. [File an issue](https://github.com/alexbeatnik/ManulEngineExt
 
 ## License
 
-**Version:** 0.0.929
+**Version:** 0.9.30
 
 Apache-2.0. See `LICENSE`.
