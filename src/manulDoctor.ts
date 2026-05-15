@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { detectRuntimeType, ManulRuntimeType } from './runtimeDetector';
+import { detectRuntimeType } from './runtimeDetector';
 import { findManulExecutable } from './huntRunner';
 
 const execFileAsync = promisify(execFile);

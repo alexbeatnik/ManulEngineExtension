@@ -198,6 +198,11 @@
         "command": "manul-engine.openScheduler",
         "title": "ManulEngine: Open Scheduler Dashboard",
         "icon": "$(calendar)"
+      },
+      {
+        "command": "manul.doctor",
+        "title": "ManulEngine: Run System Diagnostics (Doctor)",
+        "icon": "$(pulse)"
       }
     ],
     "menus": {

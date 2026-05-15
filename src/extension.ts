@@ -16,7 +16,7 @@ import {
   clearSiteCacheCommand,
 } from "./cacheTreeProvider";
 import { DEBUG_TERMINAL_NAME, TERMINAL_NAME, getConfigFileName } from "./constants";
-import { MANUL_DSL_COMMANDS, getManulDslCommands, getManulDslContextSuggestions, RE_METADATA, RE_HOOK_OPEN, RE_HOOK_CLOSE } from "./shared";
+import { getManulDslCommands, getManulDslContextSuggestions, RE_METADATA, RE_HOOK_OPEN, RE_HOOK_CLOSE } from "./shared";
 import { detectRuntimeType, ManulRuntimeType } from "./runtimeDetector";
 import { HuntDocumentFormatter } from "./formatter";
 import { SchedulerPanel } from "./schedulerPanel";
@@ -363,7 +363,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   if (_versionCheckRoot) {
     findManulExecutable(_versionCheckRoot)
       .then(async (manulExe) => {
-        const { detectRuntimeType } = await import('./runtimeDetector.js');
         const runtimeType = await detectRuntimeType(_versionCheckRoot);
         return checkManulEngineVersion(manulExe, runtimeType);
       })

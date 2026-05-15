@@ -5,7 +5,7 @@ import { execFile, spawn, ChildProcess } from "child_process";
 import * as vscode from "vscode";
 import { PAUSE_MARKER, EXPLAIN_NEXT_MARKER, DEBUG_TERMINAL_NAME, PYTHON_ENV_FLAGS, getConfigFileName } from "./constants";
 import { MIN_MANUL_ENGINE_VERSION, MIN_MANUL_HEART_VERSION, parseVersion, ExplainNextResult } from "./shared";
-import { detectRuntimeType, ManulRuntimeType } from "./runtimeDetector";
+import { ManulRuntimeType } from "./runtimeDetector";
 
 /**
  * Quote a single argument for safe use inside a terminal send-text command.
