@@ -24,7 +24,7 @@ describe('huntDiagnostics', () => {
     } as any)
   })
 
-  it('ignores non-hunt documents', () => {
+  it('ignores non-hunt documents', async () => {
     const context = { subscriptions: [] } as any
     const doc = {
       languageId: 'typescript',
@@ -36,13 +36,13 @@ describe('huntDiagnostics', () => {
     // override workspace documents
     vscode.workspace.textDocuments = [doc] as any
 
-    registerHuntDiagnostics(context)
+    await registerHuntDiagnostics(context)
 
     expect(deleteMock).toHaveBeenCalledWith(doc.uri)
     expect(setMock).not.toHaveBeenCalled()
   })
 
-  it('validates hunt documents using the extension-local shared module', () => {
+  it('validates hunt documents using the extension-local shared module', async () => {
     vi.mocked(manulShared.validateHuntDocument).mockReturnValue([
       {
         line: 2,
@@ -62,7 +62,7 @@ describe('huntDiagnostics', () => {
     }
     vscode.workspace.textDocuments = [doc] as any
 
-    registerHuntDiagnostics(context)
+    await registerHuntDiagnostics(context)
 
     expect(setMock).toHaveBeenCalledTimes(1)
     

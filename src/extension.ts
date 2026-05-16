@@ -8,7 +8,7 @@ import {
 import { findManulExecutable, runHuntFileDebugPanel, getHuntBreakpointLines, checkManulEngineVersion } from "./huntRunner";
 import { DebugControlPanel } from "./debugControlPanel";
 import { ConfigPanelProvider, generateConfigCommand } from "./configPanel";
-import { StepBuilderProvider, newHuntFileCommand, insertSetupCommand, insertTeardownCommand, insertInlinePythonCallCommand } from "./stepBuilderPanel";
+import { StepBuilderProvider, newHuntFileCommand, insertSetupCommand, insertTeardownCommand, insertInlineCallCommand } from "./stepBuilderPanel";
 import {
   CacheTreeProvider,
   CacheItem,
@@ -16,7 +16,8 @@ import {
   clearSiteCacheCommand,
 } from "./cacheTreeProvider";
 import { DEBUG_TERMINAL_NAME, TERMINAL_NAME, getConfigFileName } from "./constants";
-import { MANUL_DSL_COMMANDS, getManulDslContextSuggestions, RE_METADATA, RE_HOOK_OPEN, RE_HOOK_CLOSE } from "./shared";
+import { getManulDslCommands, getManulDslContextSuggestions, RE_METADATA, RE_HOOK_OPEN, RE_HOOK_CLOSE } from "./shared";
+import { detectRuntimeType, ManulRuntimeType } from "./runtimeDetector";
 import { HuntDocumentFormatter } from "./formatter";
 import { SchedulerPanel } from "./schedulerPanel";
 import { ExplainHoverProvider, ExplainOutputParser, clearExplanations } from "./explainHoverProvider";
@@ -150,7 +151,7 @@ function registerHuntHighlighter(context: vscode.ExtensionContext): void {
   );
 }
 
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
   registerHuntHighlighter(context);
   registerDoctorCommand(context);
   // Output channel reused across debug runs from the editor button / context menu.
@@ -188,7 +189,7 @@ export function activate(context: vscode.ExtensionContext): void {
   _refreshDebugContext(); // set initial state
   // ── Test Controller (Test Explorer) ────────────────────────────────────────
   const ctrl = createHuntTestController(context);
-  registerHuntDiagnostics(context);
+  await registerHuntDiagnostics(context);
 
   // ── Step Builder Webview Panel ────────────────────────────────────────────
   const stepBuilderProvider = new StepBuilderProvider();
@@ -297,8 +298,8 @@ export function activate(context: vscode.ExtensionContext): void {
       insertTeardownCommand()
     ),
 
-    vscode.commands.registerCommand("manul.insertInlinePythonCall", () =>
-      insertInlinePythonCallCommand()
+    vscode.commands.registerCommand("manul.insertInlineCall", () =>
+      insertInlineCallCommand()
     ),
 
     vscode.commands.registerCommand("manul.generateConfig", () =>
@@ -357,14 +358,17 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // ── Engine version check (fire-and-forget at startup) ──────────────────────
   // Resolves the executable path once to avoid a duplicate shell probe, then
-  // warns the user if the installed ManulEngine is below the minimum version.
+  // warns the user if the installed runtime is below the minimum version.
   const _versionCheckRoot = (vscode.workspace.workspaceFolders ?? [])[0]?.uri.fsPath;
   if (_versionCheckRoot) {
     findManulExecutable(_versionCheckRoot)
-      .then((manulExe) => checkManulEngineVersion(manulExe))
+      .then(async (manulExe) => {
+        const runtimeType = await detectRuntimeType(_versionCheckRoot);
+        return checkManulEngineVersion(manulExe, runtimeType);
+      })
       .then((warning) => {
         if (warning) {
-          vscode.window.showWarningMessage(`ManulEngine: ${warning}`);
+          vscode.window.showWarningMessage(`Manul: ${warning}`);
         }
       })
       .catch(() => {});
@@ -402,20 +406,26 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.languages.registerCompletionItemProvider(
       { language: "hunt" },
       {
-        provideCompletionItems(
+        async provideCompletionItems(
           document: vscode.TextDocument,
           position: vscode.Position
-        ): vscode.CompletionItem[] {
+        ): Promise<vscode.CompletionItem[]> {
           const linePrefix = document.lineAt(position).text.slice(0, position.character);
+          const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+          const workspaceRoot = workspaceFolder?.uri.fsPath ?? path.dirname(document.uri.fsPath);
+          const runtimeType = await detectRuntimeType(workspaceRoot);
 
           // ── Metadata completions (triggered by "@" at column 0) ─────────
           if (/^\s*@\w*$/.test(linePrefix)) {
+            const scriptDesc = runtimeType === 'go'
+              ? "Declares a dotted Go package path alias for later CALL GO steps."
+              : "Declares a dotted Python module or callable alias for later CALL PYTHON steps.";
             const metaEntries: { label: string; snippet: string; description: string }[] = [
               { label: "@context:",  snippet: "@context: ${1:description}",      description: "Brief context or purpose of this hunt file." },
               { label: "@title:",    snippet: "@title: ${1:Suite Name}",         description: "Short display name for the test suite." },
               { label: "@blueprint:",snippet: "@blueprint: ${1:Suite Name}",     description: "Backward-compatible alias for @title." },
               { label: "@var:",      snippet: "@var: {${1:name}} = ${2:value}",  description: "Declares a static variable for the run." },
-              { label: "@script:",   snippet: "@script: {${1:alias}} = ${2:scripts.helpers}", description: "Declares a dotted Python module or callable alias for later CALL PYTHON steps." },
+              { label: "@script:",   snippet: "@script: {${1:alias}} = ${2:scripts.helpers}", description: scriptDesc },
               { label: "@tags:",     snippet: "@tags: ${1:smoke, regression}",   description: "Comma-separated tags for filtering." },
               { label: "@data:",     snippet: "@data: ${1:path/to/file.json}",   description: "Declares a JSON or CSV data source for data-driven runs." },
               { label: "@schedule:", snippet: "@schedule: ${1|every 30 seconds,every 1 minute,every 5 minutes,every 15 minutes,every 1 hour,daily at 09:00,every monday|}", description: "Declares a schedule expression for daemon mode." },
@@ -431,15 +441,18 @@ export function activate(context: vscode.ExtensionContext): void {
 
           // ── Hook block completions ──────────────────────────────────────
           if (/^\s*\[?\w*$/.test(linePrefix)) {
+            const callSnippet = runtimeType === 'go'
+              ? "CALL GO package_name.function_name"
+              : "CALL PYTHON module_name.function_name";
             const hookBlocks: { label: string; snippet: string; description: string }[] = [
               {
                 label: "[SETUP]",
-                snippet: "[SETUP]\n${1:CALL PYTHON module_name.function_name}\n[END SETUP]",
+                snippet: `[SETUP]\n\${1:${callSnippet}}\n[END SETUP]`,
                 description: "Setup block — runs before the first step.",
               },
               {
                 label: "[TEARDOWN]",
-                snippet: "[TEARDOWN]\n${1:CALL PYTHON module_name.function_name}\n[END TEARDOWN]",
+                snippet: `[TEARDOWN]\n\${1:${callSnippet}}\n[END TEARDOWN]`,
                 description: "Teardown block — runs after all steps.",
               },
             ];
@@ -453,13 +466,13 @@ export function activate(context: vscode.ExtensionContext): void {
             // Fall through — also include DSL commands below
             return [
               ...hookItems,
-              ...buildDslCompletionItems(linePrefix),
+              ...buildDslCompletionItems(linePrefix, runtimeType),
             ];
           }
 
           // ── STEP header shortcut ────────────────────────────────────────
           // Also include DSL commands by default so they appear everywhere
-          return buildDslCompletionItems(linePrefix);
+          return buildDslCompletionItems(linePrefix, runtimeType);
         },
       },
       "@",  // trigger on "@" for metadata directives
@@ -475,7 +488,7 @@ export function activate(context: vscode.ExtensionContext): void {
 // Converts MANUL_DSL_COMMANDS from the extension-local shared module into VS Code CompletionItems
 // with proper snippet tab-stops, documentation, and sorting order.
 
-function buildDslCompletionItems(linePrefix = ""): vscode.CompletionItem[] {
+function buildDslCompletionItems(linePrefix = "", runtimeType: ManulRuntimeType = "unknown"): vscode.CompletionItem[] {
   // STEP header convenience shortcut
   const stepItem = new vscode.CompletionItem("STEP", vscode.CompletionItemKind.Keyword);
   stepItem.insertText = new vscode.SnippetString("STEP ${1:1}: ${2:Description}");
@@ -492,10 +505,12 @@ function buildDslCompletionItems(linePrefix = ""): vscode.CompletionItem[] {
     return item;
   });
 
+  const commands = getManulDslCommands(runtimeType);
+
   return [
     ...contextualItems,
     stepItem,
-    ...MANUL_DSL_COMMANDS.map((cmd, idx) => {
+    ...commands.map((cmd, idx) => {
       const item = new vscode.CompletionItem(cmd.label, vscode.CompletionItemKind.Snippet);
       item.insertText = new vscode.SnippetString(cmd.snippet);
       const md = new vscode.MarkdownString();
