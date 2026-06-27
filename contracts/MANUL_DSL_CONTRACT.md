@@ -6,7 +6,7 @@
 
 ```json
 {
-  "version": "0.0.9.29",
+  "version": "0.1.0",
   "generatedFrom": "manul_engine/helpers.py :: classify_step(), detect_mode(), parse_contextual_hint(); manul_engine/core.py :: run_mission(); manul_engine/cli.py :: parse_hunt_file(); manul_engine/actions.py :: _ActionsMixin; manul_engine/scoring.py :: DOMScorer contextual proximity rules; manul_engine/js_scripts.py :: SNAPSHOT_JS geometry export; manul_engine/imports.py :: parse_import_directive(), resolve_imports(), expand_use_directives()",
   "casePolicy": {
     "canonical": "ALL_UPPERCASE",
@@ -151,7 +151,16 @@
       "uiText": "WAIT FOR '' to be visible",
       "snippet": "WAIT FOR '${1:target}' to ${2|be visible,be hidden,disappear|}",
       "regex": "^\\s*(?:\\d+\\.\\s*)?WAIT\\s+FOR\\s+(?P<quote>[\"'])(?P<target>.+?)(?P=quote)\\s+TO\\s+(?:(?:BE\\s+(?P<state_be>VISIBLE|HIDDEN))|(?P<state_disappear>DISAPPEAR))\\s*$",
-      "description": "Explicit wait for a quoted element to reach a desired visibility state (visible, hidden, or disappear). Uses Playwright locator.wait_for(state=...).",
+      "description": "Explicit wait for a quoted element to reach a desired visibility state (visible, hidden, or disappear). If the quoted target looks like a CSS selector (starts with #, ., [, contains -, >, or :) the engine uses page.wait_for_selector(state=...) instead of get_by_text(), so custom elements like 'ytd-video-renderer' work correctly.",
+      "category": "wait"
+    },
+    {
+      "id": "wait_for_selector",
+      "label": "WAIT FOR SELECTOR",
+      "uiText": "WAIT FOR SELECTOR ''",
+      "snippet": "WAIT FOR SELECTOR '${1:css-selector}'",
+      "regex": "\\bWAIT\\s+FOR\\s+SELECTOR\\b",
+      "description": "Explicit wait for a CSS selector to appear in the DOM. Uses page.wait_for_selector() with a 15-second timeout. Prefer this over WAIT FOR text when targeting DOM nodes by tag or class rather than visible text (e.g. WAIT FOR SELECTOR 'ytd-video-renderer').",
       "category": "wait"
     },
     {
@@ -272,6 +281,15 @@
       "category": "network"
     },
     {
+      "id": "full_scan",
+      "label": "FULL SCAN",
+      "uiText": "FULL SCAN",
+      "snippet": "FULL SCAN",
+      "regex": "\\bFULL\\s+SCAN\\b",
+      "description": "Scans the current page and prints all interactive controls grouped by semantic landmark ancestor (form, nav, header, footer, dialog, section …) as Markdown tables. Designed for LLM consumption — each group becomes a ## heading with a role/label/locator/tag/editable table. No file output; output is console-only.",
+      "category": "utility"
+    },
+    {
       "id": "scan_page",
       "label": "SCAN PAGE",
       "uiText": "SCAN PAGE",
@@ -297,6 +315,24 @@
       "regex": "^\\s*(?:\\d+\\.\\s*)?SET\\b",
       "description": "Sets a runtime variable mid-flight. Both {braced} and bare key forms accepted. Quoted values are auto-unquoted. Available for {placeholder} substitution in all subsequent steps.",
       "category": "data"
+    },
+    {
+      "id": "print",
+      "label": "PRINT",
+      "uiText": "PRINT \"message {variable}\"",
+      "snippet": "PRINT \"${1:message}\"",
+      "regex": "^\\s*(?:\\d+\\.\\s*)?PRINT\\b",
+      "description": "Logs a message to the run output, with {placeholder} variables substituted and a single layer of surrounding quotes stripped. No element resolution. Mirrors ManulHeart's PRINT (CmdPrint).",
+      "category": "utility"
+    },
+    {
+      "id": "screenshot",
+      "label": "SCREENSHOT",
+      "uiText": "SCREENSHOT [\"name\"]",
+      "snippet": "SCREENSHOT \"${1:name}\"",
+      "regex": "^\\s*(?:\\d+\\.\\s*)?SCREENSHOT\\b",
+      "description": "Captures a full-page PNG on demand into screenshots/<name>.png under the CWD (auto-named when no label is given). Mirrors ManulHeart's SCREENSHOT command.",
+      "category": "utility"
     },
     {
       "id": "debug",
@@ -369,6 +405,33 @@
       "regex": "^\\s*(?:\\d+\\.\\s*)?ELSE\\s*:\\s*$",
       "description": "Default branch in an IF block. Only one ELSE is allowed and must be the last branch.",
       "category": "control_flow"
+    },
+    {
+      "id": "repeat_loop",
+      "label": "REPEAT",
+      "uiText": "REPEAT 3 TIMES:",
+      "snippet": "REPEAT ${1:N} TIMES:\n        ${2:action}",
+      "regex": "^\\s*(?:\\d+\\.\\s*)?REPEAT\\s+\\d+\\s+TIMES\\s*:\\s*$",
+      "description": "Fixed-count loop. Body lines are indented by 4 extra spaces. {i} counter variable is auto-set (1-based). Nesting supported.",
+      "category": "control_flow"
+    },
+    {
+      "id": "for_each_loop",
+      "label": "FOR EACH",
+      "uiText": "FOR EACH {item} IN {items}:",
+      "snippet": "FOR EACH {${1:var}} IN {${2:collection}}:\n        ${3:action}",
+      "regex": "^\\s*(?:\\d+\\.\\s*)?FOR\\s+EACH\\s+\\{?\\w+\\}?\\s+IN\\s+\\{?\\w+\\}?\\s*:\\s*$",
+      "description": "Iterate over comma-separated values from a variable. On each iteration, the loop variable and {i} counter are set. Nesting supported.",
+      "category": "control_flow"
+    },
+    {
+      "id": "while_loop",
+      "label": "WHILE",
+      "uiText": "WHILE button 'Next' exists:",
+      "snippet": "WHILE ${1:condition}:\n        ${2:action}",
+      "regex": "^\\s*(?:\\d+\\.\\s*)?WHILE\\b.+:\\s*$",
+      "description": "Repeat while condition is true. Uses same conditions as IF blocks. Safety limit: 100 iterations. {i} counter auto-set. Nesting supported.",
+      "category": "control_flow"
     }
   ],
   "contextualQualifiers": [
@@ -423,7 +486,7 @@
       "label": "@context:",
       "uiText": "@context: description",
       "snippet": "@context: ${1:description}",
-      "description": "Strategic context passed to the engine and LLM planner. Placed at the top of the file."
+      "description": "Strategic context for the mission (documentation / agent hint). Placed at the top of the file."
     },
     {
       "id": "title",
@@ -505,7 +568,7 @@
       "id": "drag",
       "triggers": ["drag", "drop"],
       "triggerRule": "Both 'drag' AND 'drop' must be present as word-boundary tokens.",
-      "description": "Drag-and-drop interaction via Playwright or manual mouse events."
+      "description": "Drag-and-drop interaction via CDP Input mouse events."
     },
     {
       "id": "select",
