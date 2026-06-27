@@ -9,7 +9,6 @@ import { DEFAULT_CONFIG_FILENAME, getConfigFileName } from "./constants";
 const DEFAULT_CONFIG = {
   _note:
     "ManulEngine configuration. All keys are optional. Env vars MANUL_* always override.",
-  model: null,
   headless: false,
   browser: "chromium",
   channel: null,
@@ -17,11 +16,6 @@ const DEFAULT_CONFIG = {
   browser_args: [],
   timeout: 5000,
   nav_timeout: 30000,
-  ai_always: false,
-  ai_policy: "prior",
-  ai_threshold: null,
-  controls_cache_enabled: true,
-  controls_cache_dir: "cache",
   semantic_cache_enabled: true,
   log_name_maxlen: 0,
   log_thought_maxlen: 0,
@@ -158,7 +152,7 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
 <head>
   <meta charset="UTF-8"/>
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; connect-src http://localhost:11434;"/>
+    content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>ManulEngine Config</title>
   <style>
@@ -189,13 +183,6 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
       background: var(--vscode-editorWarning-background, #3a3000);
       border-left: 3px solid var(--vscode-editorWarning-foreground, #cca700);
       font-size: 0.92em; }
-    #ollama-status { display: flex; align-items: center; gap: 5px; margin-top: 3px; font-size: 0.85em;
-      color: var(--vscode-descriptionForeground); }
-    .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .dot.ok  { background: #4ec94e; }
-    .dot.off { background: #888; }
-    .dot.spin { background: #888; animation: pulse 1s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
   </style>
 </head>
 <body>
@@ -207,14 +194,6 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
   </div>
 
   <div id="form">
-    <label>model
-      <select id="model">
-        <option value="">null (heuristics-only)</option>
-      </select>
-    </label>
-    <div id="ollama-status"><span class="dot spin" id="ollama-dot"></span><span id="ollama-label">Checking Ollama…</span></div>
-    <div class="hint">Select from installed Ollama models. Leave empty to disable AI.</div>
-
     <div class="checkbox-row">
       <input type="checkbox" id="headless"/>
       <label for="headless">headless</label>
@@ -223,15 +202,11 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
 
     <label>browser
       <select id="browser">
-        <option value="chromium">Chromium (default)</option>
-        <option value="firefox">Firefox</option>
-        <option value="webkit">WebKit (Safari)</option>
-        <option value="chrome">Chrome (System)</option>
-        <option value="msedge">Edge (System)</option>
-        <option value="electron">Electron (Embedded View)</option>
+        <option value="chromium">Chromium (default — launch system Chrome)</option>
+        <option value="electron">Electron / attach to a running Chrome over CDP</option>
       </select>
     </label>
-    <div class="hint">Browser engine used by Playwright to run hunt tests.</div>
+    <div class="hint">Both runtimes drive system Chrome over CDP. Use channel/executable_path to pick a specific binary.</div>
 
     <label>browser_args
       <input type="text" id="browser_args" placeholder="e.g. --disable-gpu, --lang=uk"/>
@@ -241,7 +216,7 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
       <label>channel
         <input type="text" id="channel" placeholder="e.g. chrome, msedge, chrome-beta"/>
       </label>
-      <div class="hint">Playwright browser channel (optional).</div>
+      <div class="hint">Chrome/Chromium channel to launch (chrome, msedge, chrome-beta, chromium).</div>
 
     <label>executable_path
       <input type="text" id="executable_path" placeholder="e.g. /usr/bin/discord or C:\\...\\Discord.exe"/>
@@ -257,35 +232,6 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
       <input type="number" id="nav_timeout" min="1000" step="1000"/>
     </label>
     <div class="hint">Navigation timeout.</div>
-
-    <div class="checkbox-row">
-      <input type="checkbox" id="ai_always"/>
-      <label for="ai_always">ai_always</label>
-    </div>
-    <div class="hint" id="ai-always-hint">Always call the LLM picker (bypasses heuristic short-circuits). Has no effect when model is empty.</div>
-
-    <label>ai_policy
-      <select id="ai_policy">
-        <option value="prior">prior (heuristic score as hint)</option>
-        <option value="strict">strict (force max-score element)</option>
-      </select>
-    </label>
-
-    <label>ai_threshold
-      <input type="number" id="ai_threshold" placeholder="null = auto-derive from model size"/>
-    </label>
-    <div class="hint">Score threshold before LLM fallback. Empty = auto.</div>
-
-    <div class="checkbox-row">
-      <input type="checkbox" id="controls_cache_enabled"/>
-      <label for="controls_cache_enabled">Persistent Controls Cache</label>
-    </div>
-    <div class="hint">Stores resolved element locators on disk per site and page. Reused across separate runs. Disable when your app's DOM has changed significantly.</div>
-
-    <label>controls_cache_dir
-      <input type="text" id="controls_cache_dir" placeholder="cache"/>
-    </label>
-    <div class="hint">Directory for Controls Cache files (relative to workspace root or absolute).</div>
 
     <div class="checkbox-row">
       <input type="checkbox" id="semantic_cache_enabled"/>
@@ -377,10 +323,7 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
     function doOpen()     { vsc.postMessage({ command: 'open' }); }
 
     function doSave() {
-      const modelVal  = g('model').value.trim();
-      const threshVal = g('ai_threshold').value.trim();
       const cfg = {
-        model: modelVal === '' ? null : modelVal,
         headless: g('headless').checked,
         browser: g('browser').value,
         browser_args: g('browser_args').value.trim().split(/[,\\s]+/).map(s => s.trim()).filter(Boolean),
@@ -388,11 +331,6 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
         executable_path: g('executable_path').value.trim() || null,
         timeout: parseInt(g('timeout').value, 10) || 5000,
         nav_timeout: parseInt(g('nav_timeout').value, 10) || 30000,
-        ai_always: modelVal !== '' && g('ai_always').checked,
-        ai_policy: g('ai_policy').value,
-        ai_threshold: threshVal === '' ? null : parseInt(threshVal, 10),
-        controls_cache_enabled: g('controls_cache_enabled').checked,
-        controls_cache_dir: g('controls_cache_dir').value.trim() || 'cache',
         semantic_cache_enabled: g('semantic_cache_enabled').checked,
         log_name_maxlen: (v => isNaN(v) ? 0 : v)(parseInt(g('log_name_maxlen').value, 10)),
         log_thought_maxlen: (v => isNaN(v) ? 0 : v)(parseInt(g('log_thought_maxlen').value, 10)),
@@ -411,30 +349,14 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
 
     function doLoad(config, exists) {
       g('no-config').style.display = exists ? 'none' : 'block';
-      const modelVal = config.model ?? '';
-      // Ensure the stored model is available as an option (Ollama may not be running)
-      const sel = g('model');
-      const hasOpt = Array.from(sel.options).some(function(o) { return o.value === modelVal; });
-      if (modelVal && !hasOpt) {
-        var customOpt = document.createElement('option');
-        customOpt.value = modelVal;
-        customOpt.textContent = modelVal;
-        sel.appendChild(customOpt);
-      }
-      sel.value = modelVal;
       g('headless').checked    = !!config.headless;
-      const _validBrowsers = ['chromium', 'firefox', 'webkit', 'chrome', 'msedge', 'electron'];
+      const _validBrowsers = ['chromium', 'electron'];
       g('browser').value       = _validBrowsers.includes(config.browser) ? config.browser : 'chromium';
       g('browser_args').value  = Array.isArray(config.browser_args) ? config.browser_args.join(', ') : '';
         g('channel').value = config.channel ?? '';
       g('executable_path').value = config.executable_path ?? '';
       g('timeout').value       = config.timeout ?? 5000;
       g('nav_timeout').value   = config.nav_timeout ?? 30000;
-      g('ai_always').checked   = !!config.ai_always;
-      g('ai_policy').value     = config.ai_policy ?? 'prior';
-      g('ai_threshold').value  = config.ai_threshold ?? '';
-      g('controls_cache_enabled').checked = config.controls_cache_enabled !== false;
-      g('controls_cache_dir').value       = config.controls_cache_dir ?? 'cache';
       g('semantic_cache_enabled').checked = config.semantic_cache_enabled !== false;
       g('log_name_maxlen').value          = config.log_name_maxlen ?? 0;
       g('log_thought_maxlen').value       = config.log_thought_maxlen ?? 0;
@@ -454,22 +376,11 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
       g('html_report').checked               = !!config.html_report;
       g('verify_max_retries').value          = config.verify_max_retries ?? '15';
       g('explain_mode').checked              = !!config.explain_mode;
-      syncAiAlways();
     }
 
     g('btn-generate').addEventListener('click', doGenerate);
     g('btn-save').addEventListener('click', doSave);
     g('btn-open').addEventListener('click', doOpen);
-
-    // Disable ai_always when no model is set
-    function syncAiAlways() {
-      const hasModel = g('model').value.trim() !== '';
-      g('ai_always').disabled = !hasModel;
-      g('ai-always-hint').style.color = hasModel
-        ? '' : 'var(--vscode-editorWarning-foreground, #cca700)';
-      if (!hasModel) { g('ai_always').checked = false; }
-    }
-    g('model').addEventListener('change', syncAiAlways);
 
     window.addEventListener('message', function(event) {
       var msg = event.data;
@@ -477,50 +388,6 @@ export class ConfigPanelProvider implements vscode.WebviewViewProvider {
         doLoad(msg.config, msg.exists);
       }
     });
-
-    // ── Ollama model discovery ────────────────────────────────────────────────
-    (function fetchOllamaModels() {
-      const dot   = g('ollama-dot');
-      const label = g('ollama-label');
-      const sel   = g('model');
-
-      function buildSelect(models) {
-        const current = sel.value;
-        sel.textContent = '';
-        var nullOpt = document.createElement('option');
-        nullOpt.value = '';
-        nullOpt.textContent = 'null (heuristics-only)';
-        sel.appendChild(nullOpt);
-        models.forEach(function(n) {
-          var opt = document.createElement('option');
-          opt.value = String(n);
-          opt.textContent = String(n);
-          sel.appendChild(opt);
-        });
-        // If current value is not in the list, add it so it isn't lost
-        if (current && !models.includes(current)) {
-          var customOpt = document.createElement('option');
-          customOpt.value = current;
-          customOpt.textContent = current;
-          sel.appendChild(customOpt);
-        }
-        if (current !== undefined) { sel.value = current; }
-      }
-
-      fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(3000) })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          const models = (data.models || []).map(function(m) { return m.name; });
-          buildSelect(models);
-          dot.className = 'dot ok';
-          label.textContent = 'Ollama connected — ' + models.length + ' model' + (models.length !== 1 ? 's' : '') + ' available';
-        })
-        .catch(function() {
-          buildSelect([]);
-          dot.className = 'dot off';
-          label.textContent = 'Ollama not available — leave empty for heuristics-only';
-        });
-    })();
 
     vsc.postMessage({ command: 'load' });
   </script>

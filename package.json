@@ -124,11 +124,6 @@
           "type": "webview",
           "id": "manul.configView",
           "name": "Configuration"
-        },
-        {
-          "id": "manul.cacheView",
-          "name": "Cache",
-          "type": "tree"
         }
       ]
     },
@@ -168,21 +163,6 @@
       {
         "command": "manul.generateConfig",
         "title": "ManulEngine: Generate Default Config"
-      },
-      {
-        "command": "manul.clearAllCache",
-        "title": "ManulEngine: Clear All Cache",
-        "icon": "$(trash)"
-      },
-      {
-        "command": "manul.clearSiteCache",
-        "title": "Clear Cache for This Site",
-        "icon": "$(trash)"
-      },
-      {
-        "command": "manul.refreshCache",
-        "title": "ManulEngine: Refresh Cache View",
-        "icon": "$(refresh)"
       },
       {
         "command": "manul.debugHighlight",
@@ -245,27 +225,10 @@
           "group": "navigation@3"
         }
       ],
-      "view/item/context": [
-        {
-          "command": "manul.clearSiteCache",
-          "when": "view == manul.cacheView && viewItem == cacheEntry",
-          "group": "inline"
-        }
-      ],
       "view/title": [
         {
-          "command": "manul.clearAllCache",
-          "when": "view == manul.cacheView",
-          "group": "navigation@1"
-        },
-        {
-          "command": "manul.refreshCache",
-          "when": "view == manul.cacheView",
-          "group": "navigation@2"
-        },
-        {
           "command": "manul-engine.openScheduler",
-          "when": "view == manul.stepBuilder || view == manul.configView || view == manul.cacheView",
+          "when": "view == manul.stepBuilder || view == manul.configView",
           "group": "navigation@3"
         }
       ]
