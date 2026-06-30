@@ -2,8 +2,8 @@
 // Extension-local runtime contracts, parsers, and validators
 // ---------------------------------------------------------------------------
 
-export const MIN_MANUL_ENGINE_VERSION = '0.0.9.30'
-export const MIN_MANUL_HEART_VERSION = '0.0.1.1'
+export const MIN_MANUL_ENGINE_VERSION = '0.1.0'
+export const MIN_MANUL_ENGINE_GO_VERSION = '0.1.0'
 
 export type StepStatus = 'pending' | 'running' | 'pass' | 'fail' | 'skipped'
 
@@ -219,7 +219,7 @@ export const MANUL_DSL_COMMANDS: ManulDslCommand[] = [
   { id: 'mock-request',          label: 'Mock Request',          icon: '🎭', uiText: "MOCK GET \"\" with ''",                                             snippet: "MOCK ${1|GET,POST,PUT,PATCH,DELETE|} \"${2:url_pattern}\" with '${3:mock_file}'", description: 'Intercepts matching network requests and fulfills them from a local mock file.',       example: "MOCK GET \"/api/profile\" with 'mocks/profile.json'" },
   { id: 'scan-page',             label: 'Scan Page',             icon: '🔍', uiText: 'SCAN PAGE',                                                         snippet: 'SCAN PAGE${1: into {${2:filename}}}',                                         description: 'Scans the current page for interactive elements and optionally writes a draft file.',    example: 'SCAN PAGE into {draft.hunt}' },
   { id: 'call-python',           label: 'Call Python',           icon: '🐍', uiText: 'CALL PYTHON module.function',                                      snippet: 'CALL PYTHON ${1:module}.${2:function}${3: with args: "${4:arg}"}${5: into {${6:result}}}', description: 'Executes a synchronous Python helper inline with dotted imports or @script aliases, plus optional arguments and capture.', example: 'CALL PYTHON {auth}.issue_token with args: "{email}" into {token}', runtime: 'python' as const },
-  { id: 'call-go',               label: 'Call Go',               icon: '🐹', uiText: 'CALL GO package.function',                                         snippet: 'CALL GO ${1:package}.${2:function}${3: with args: "${4:arg}"}${5: into {${6:result}}}', description: 'Invokes a registered Go function via the ManulHeart extension API.',                      example: 'CALL GO helpers.seed_user with args: "{email}" into {token}', runtime: 'go' as const },
+  { id: 'call-go',               label: 'Call Go',               icon: '🐹', uiText: 'CALL GO package.function',                                         snippet: 'CALL GO ${1:package}.${2:function}${3: with args: "${4:arg}"}${5: into {${6:result}}}', description: 'Invokes a registered Go function via the ManulEngine (Go) extension API.',                      example: 'CALL GO helpers.seed_user with args: "{email}" into {token}', runtime: 'go' as const },
   { id: 'set-variable',          label: 'Set Variable',          icon: '📝', uiText: 'SET {variable} = value',                                            snippet: 'SET {${1:variable}} = ${2:value}',                                             description: 'Sets or updates a runtime variable for later placeholder substitution.',                 example: 'SET {environment} = staging' },
   { id: 'print',                 label: 'Print',                 icon: '📢', uiText: 'PRINT "message"',                                                   snippet: 'PRINT "${1:message}"',                                                        description: 'Logs a message to the run output, with {placeholder} variables substituted.',            example: 'PRINT "The price is {price}"' },
   { id: 'screenshot',            label: 'Screenshot',            icon: '📸', uiText: 'SCREENSHOT ["name"]',                                              snippet: 'SCREENSHOT "${1:name}"',                                                      description: 'Captures a full-page PNG into screenshots/<name>.png on demand (auto-named if omitted).', example: 'SCREENSHOT "after login"' },

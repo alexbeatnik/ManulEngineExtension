@@ -41,9 +41,9 @@ export function registerDoctorCommand(context: vscode.ExtensionContext) {
                 try {
                     const manulExe = await findManulExecutable(workspaceRoot);
                     const { stdout: manulOut } = await execFileAsync(manulExe, ['--version']);
-                    report += `<li>✅ <b>ManulHeart:</b> ${escapeHtml(manulOut.trim())}</li>`;
+                    report += `<li>✅ <b>ManulEngine (Go):</b> ${escapeHtml(manulOut.trim())}</li>`;
                 } catch {
-                    report += `<li>⚠️ <b>ManulHeart:</b> Executable not found. Run <code>make install</code> or <code>go build -o manul ./cmd/manul</code>.</li>`;
+                    report += `<li>⚠️ <b>ManulEngine (Go):</b> Executable not found. Run <code>make install</code> or <code>go build -o manul ./cmd/manul</code>.</li>`;
                 }
             } else {
                 // Python runtime checks

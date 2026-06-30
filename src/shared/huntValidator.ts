@@ -164,7 +164,7 @@ function isScreenshotLine(line: string): boolean {
 }
 
 function isEndBlockLine(line: string): boolean {
-  // Explicit block terminators (ManulHeart style; tolerated cross-engine):
+  // Explicit block terminators (ManulEngine (Go) style; tolerated cross-engine):
   // END IF / ENDIF / END REPEAT / END WHILE / END FOR [EACH], optional trailing colon.
   return /^END\s*(?:IF|REPEAT|WHILE|FOR(?:\s+EACH)?)\s*:?$/i.test(normalizeActionLine(line))
 }
