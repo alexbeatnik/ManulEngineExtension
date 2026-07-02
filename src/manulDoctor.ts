@@ -68,6 +68,7 @@ export function registerDoctorCommand(context: vscode.ExtensionContext) {
             // Both runtimes drive a system-installed Chrome/Chromium over CDP.
             try {
                 const { stdout: chromeOut } = await execFileAsync('google-chrome', ['--version'])
+                    .catch(() => execFileAsync('google-chrome-stable', ['--version']))
                     .catch(() => execFileAsync('chromium', ['--version']))
                     .catch(() => execFileAsync('chromium-browser', ['--version']));
                 report += `<li>✅ <b>Chrome/Chromium:</b> ${escapeHtml(chromeOut.trim())}</li>`;
