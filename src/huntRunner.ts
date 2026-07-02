@@ -4,7 +4,7 @@ import * as os from "os";
 import { execFile, spawn, ChildProcess } from "child_process";
 import * as vscode from "vscode";
 import { PAUSE_MARKER, EXPLAIN_NEXT_MARKER, DEBUG_TERMINAL_NAME, PYTHON_ENV_FLAGS, getConfigFileName } from "./constants";
-import { MIN_MANUL_ENGINE_VERSION, MIN_MANUL_HEART_VERSION, parseVersion, ExplainNextResult } from "./shared";
+import { MIN_MANUL_ENGINE_VERSION, MIN_MANUL_ENGINE_GO_VERSION, parseVersion, ExplainNextResult } from "./shared";
 import { ManulRuntimeType } from "./runtimeDetector";
 
 /**
@@ -42,11 +42,11 @@ export async function checkManulEngineVersion(manulExe: string, runtimeType?: Ma
       const iv = parseVersion(installed);
 
       const isGo = runtimeType === 'go' || stdout.toLowerCase().includes('heart');
-      const minVersion = isGo ? MIN_MANUL_HEART_VERSION : MIN_MANUL_ENGINE_VERSION;
+      const minVersion = isGo ? MIN_MANUL_ENGINE_GO_VERSION : MIN_MANUL_ENGINE_VERSION;
       const installHint = isGo
         ? `Run: go build -o manul ./cmd/manul`
         : `Run: pip install --upgrade "manul-engine==${MIN_MANUL_ENGINE_VERSION}"`;
-      const productName = isGo ? 'ManulHeart' : 'ManulEngine';
+      const productName = isGo ? 'ManulEngine (Go)' : 'ManulEngine';
 
       const mv = parseVersion(minVersion);
       for (let i = 0; i < Math.max(iv.length, mv.length); i++) {

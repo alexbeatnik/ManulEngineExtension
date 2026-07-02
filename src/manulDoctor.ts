@@ -41,9 +41,9 @@ export function registerDoctorCommand(context: vscode.ExtensionContext) {
                 try {
                     const manulExe = await findManulExecutable(workspaceRoot);
                     const { stdout: manulOut } = await execFileAsync(manulExe, ['--version']);
-                    report += `<li>✅ <b>ManulHeart:</b> ${escapeHtml(manulOut.trim())}</li>`;
+                    report += `<li>✅ <b>ManulEngine (Go):</b> ${escapeHtml(manulOut.trim())}</li>`;
                 } catch {
-                    report += `<li>⚠️ <b>ManulHeart:</b> Executable not found. Run <code>make install</code> or <code>go build -o manul ./cmd/manul</code>.</li>`;
+                    report += `<li>⚠️ <b>ManulEngine (Go):</b> Executable not found. Run <code>make install</code> or <code>go build -o manul ./cmd/manul</code>.</li>`;
                 }
             } else {
                 // Python runtime checks
@@ -55,21 +55,25 @@ export function registerDoctorCommand(context: vscode.ExtensionContext) {
                     report += `<li>❌ <b>Python:</b> Not found in PATH. Install Python >= 3.10.</li>`;
                 }
 
+                const versionSnippet = "from importlib.metadata import version; print(version('manul-engine'))";
                 try {
-                    const { stdout: manulOut } = await execFileAsync('python3', ['-c', 'import manul; print(manul.__version__)'])
-                        .catch(() => execFileAsync('python', ['-c', 'import manul; print(manul.__version__)']));
+                    const { stdout: manulOut } = await execFileAsync('python3', ['-c', versionSnippet])
+                        .catch(() => execFileAsync('python', ['-c', versionSnippet]));
                     report += `<li>✅ <b>ManulEngine (Global):</b> v${escapeHtml(manulOut.trim())}</li>`;
                 } catch {
                     report += `<li>⚠️ <b>ManulEngine:</b> Global module not found (may be inside a venv or workspace executable path is used).</li>`;
                 }
+            }
 
-                try {
-                    const { stdout: pwOut } = await execFileAsync('python3', ['-m', 'playwright', '--version'])
-                        .catch(() => execFileAsync('python', ['-m', 'playwright', '--version']));
-                    report += `<li>✅ <b>Playwright:</b> ${escapeHtml(pwOut.trim())}</li>`;
-                } catch {
-                    report += `<li>❌ <b>Playwright:</b> Not found or failing to run <code>playwright install</code>.</li>`;
-                }
+            // Both runtimes drive a system-installed Chrome/Chromium over CDP.
+            try {
+                const { stdout: chromeOut } = await execFileAsync('google-chrome', ['--version'])
+                    .catch(() => execFileAsync('google-chrome-stable', ['--version']))
+                    .catch(() => execFileAsync('chromium', ['--version']))
+                    .catch(() => execFileAsync('chromium-browser', ['--version']));
+                report += `<li>✅ <b>Chrome/Chromium:</b> ${escapeHtml(chromeOut.trim())}</li>`;
+            } catch {
+                report += `<li>❌ <b>Chrome/Chromium:</b> Not found in PATH. ManulEngine drives a system-installed Chrome over CDP.</li>`;
             }
 
             report += "</ul><p><i>If you are using a local workspace executable path, global metrics may show ⚠️ but the runner will still work.</i></p>";

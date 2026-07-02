@@ -158,6 +158,17 @@ function isPrintLine(line: string): boolean {
   return /^PRINT\s+.+$/i.test(normalizeActionLine(line))
 }
 
+function isScreenshotLine(line: string): boolean {
+  // SCREENSHOT alone (auto-named) or SCREENSHOT "name".
+  return /^SCREENSHOT(\s+.+)?$/i.test(normalizeActionLine(line))
+}
+
+function isEndBlockLine(line: string): boolean {
+  // Explicit block terminators (ManulEngine (Go) style; tolerated cross-engine):
+  // END IF / ENDIF / END REPEAT / END WHILE / END FOR [EACH], optional trailing colon.
+  return /^END\s*(?:IF|REPEAT|WHILE|FOR(?:\s+EACH)?)\s*:?$/i.test(normalizeActionLine(line))
+}
+
 function isClickLikeLine(line: string): boolean {
   const normalized = normalizeActionLine(line)
   return startsWithWord(normalized, 'Click') && countQuotedFragments(normalized) >= 1
@@ -314,6 +325,9 @@ export function isValidHuntActionLine(line: string, options: { insideHookBlock?:
     isMockLine,
     isScanPageLine,
     isSetLine,
+    isPrintLine,
+    isScreenshotLine,
+    isEndBlockLine,
     isDebugVarsLine,
     isDebugLine,
   ]

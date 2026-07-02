@@ -5,7 +5,7 @@
 
 ```json
 {
-  "version": "0.0.9.29",
+  "version": "0.1.0",
   "generatedFrom": "manul_engine/debug.py :: _DebugMixin; manul_engine/explain_next.py :: ExplainNextDebugger, PageContext, WhatIfResult, capture_page_context, _heuristic_pre_check, _HeuristicHit",
 
   "modules": {
@@ -19,8 +19,8 @@
     "explain_next": {
       "file": "manul_engine/explain_next.py",
       "class": "ExplainNextDebugger",
-      "description": "Interactive What-If Analysis REPL for hypothetical step evaluation during debug pauses. Combines DOMScorer heuristic scoring with optional LLM analysis against a read-only page snapshot.",
-      "publicExports": ["ExplainNextDebugger", "WhatIfResult", "PageContext", "capture_page_context", "WHAT_IF_SYSTEM_PROMPT"],
+      "description": "Interactive What-If dry-run REPL for hypothetical step evaluation during debug pauses. Uses deterministic DOMScorer heuristic scoring against a read-only page snapshot (no LLM).",
+      "publicExports": ["ExplainNextDebugger", "WhatIfResult", "PageContext", "capture_page_context"],
       "reExportedFrom": "manul_engine.__init__ (ExplainNextDebugger, WhatIfResult)"
     }
   },
@@ -84,7 +84,7 @@
         "name": "_get_explain_next",
         "signature": "() -> ExplainNextDebugger",
         "async": false,
-        "description": "Lazy factory for ExplainNextDebugger. Passes self._llm, self.learned_elements, self.last_xpath, and engine=self.",
+        "description": "Lazy factory for ExplainNextDebugger. Passes self.learned_elements, self.last_xpath, and engine=self.",
         "returns": "ExplainNextDebugger (cached after first call)"
       },
       "debugPrompt": {
@@ -114,19 +114,19 @@
       ],
       "explainNextMarker": {
         "format": "\\x00MANUL_EXPLAIN_NEXT\\x00{json}\\n",
-        "json": "Serialized WhatIfResult via _result_to_dict(): step, score (normalized float 0.0–1.0), confidence_label, target_found, target_element, explanation, risk, suggestion, heuristic_score (normalized float 0.0–1.0 or null), heuristic_match"
+        "json": "Serialized WhatIfResult via _result_to_dict(): step, score, confidence_label, target_found, target_element, explanation, risk, suggestion, heuristic_score, heuristic_match"
       }
     },
 
     "terminalMode": {
       "condition": "stdin IS a TTY (interactive terminal)",
-      "prompt": "[DEBUG] Next step: {step}\\n        ENTER/n = execute \u00b7 e = explain-next \u00b7 h = re-highlight \u00b7 w = what-if \u00b7 pause = Inspector \u00b7 c = continue all\u2026",
+      "prompt": "[DEBUG] Next step: {step}\\n        ENTER/n = execute \u00b7 e = explain-next \u00b7 h = re-highlight \u00b7 w = what-if \u00b7 pause = pause (Chrome stays interactive) \u00b7 c = continue all\u2026",
       "inputCommands": [
         { "input": "ENTER or n or any",  "action": "Execute the current step." },
         { "input": "e or explain-next",  "action": "One-shot What-If evaluation of the current step (prints format_report, stays paused)." },
         { "input": "h",                  "action": "Re-scroll to highlighted element." },
         { "input": "w or what-if",       "action": "Enter ExplainNextDebugger REPL." },
-        { "input": "pause",              "action": "Open Playwright Inspector (page.pause())." },
+        { "input": "pause",              "action": "Enter the interactive debug pause." },
         { "input": "c or continue",      "action": "Set _debug_continue=True, skip all future pauses." }
       ]
     },
@@ -161,7 +161,6 @@
 
     "constructor": {
       "parameters": [
-        { "name": "llm",               "type": "LLMProvider",    "description": "LLM provider (OllamaProvider or NullProvider for heuristics-only)." },
         { "name": "learned_elements",   "type": "dict | None",   "default": "None", "description": "Engine's semantic cache (read-only for scoring context)." },
         { "name": "last_xpath",         "type": "str | None",    "default": "None", "description": "Most recently resolved xpath for context-reuse scoring." },
         { "name": "engine",             "type": "object | None",  "default": "None", "description": "Reference to _DebugMixin (for highlight calls). Optional — highlighting is skipped when None." }
@@ -182,11 +181,9 @@
           "2. extract_quoted(step) — extract quoted target strings",
           "3. classify_step(step) — determine step type (navigate, click, etc.)",
           "4. _heuristic_pre_check(elements, step, search_texts, target_field) — DOMScorer scoring",
-          "5. Build LLM user prompt with page context + heuristic results",
-          "6. llm.call_json(WHAT_IF_SYSTEM_PROMPT, user_prompt) — LLM analysis",
-          "7. If LLM unavailable: _heuristic_only_result() fallback",
-          "8. _highlight_match(page, hit) — highlight best candidate on live page",
-          "9. Append WhatIfResult to history"
+          "5. _heuristic_only_result() — build the WhatIfResult from heuristic scoring (deterministic, no LLM)",
+          "6. _highlight_match(page, hit) — highlight best candidate on live page",
+          "7. Append WhatIfResult to history"
         ],
         "readOnlyGuarantee": "Only page.url, page.title(), page.frames[].evaluate(SNAPSHOT_JS) and page.evaluate(_VISIBLE_TEXT_JS) are called. No clicks, fills, navigations, or DOM mutations."
       },
@@ -248,17 +245,17 @@
       "importPath": "from manul_engine import WhatIfResult",
       "fields": [
         { "name": "step",             "type": "str",          "description": "The hypothetical step that was evaluated." },
-        { "name": "score",            "type": "int",          "description": "Confidence score 0–10 (LLM or heuristic-mapped). Normalized to float [0.0, 1.0] by _result_to_dict() before emitting to the extension marker." },
+        { "name": "score",            "type": "int",          "description": "Confidence score 0–10." },
         { "name": "target_found",     "type": "bool",         "description": "Whether a matching target element was found." },
         { "name": "target_element",   "type": "str | None",   "description": "Description of the matched element or None." },
         { "name": "explanation",      "type": "str",          "description": "What would happen if the step executes." },
         { "name": "risk",             "type": "str",          "description": "Potential side effects or failure modes." },
-        { "name": "suggestion",       "type": "str | None",   "description": "Improved step phrasing if score < 7 (raw 0–10 scale), else None." },
-        { "name": "heuristic_score",  "type": "int | None",   "description": "DOMScorer best score (raw scaled integer). Normalized to float [0.0, 1.0] by _result_to_dict() before emitting to the extension marker. None when unavailable.", "default": "None" },
+        { "name": "suggestion",       "type": "str | None",   "description": "Improved step phrasing if score < 7, else None." },
+        { "name": "heuristic_score",  "type": "int | None",   "description": "DOMScorer best score (scaled integer) or None.", "default": "None" },
         { "name": "heuristic_match",  "type": "str | None",   "description": "DOMScorer best candidate element name or None.", "default": "None" }
       ],
       "properties": [
-        { "name": "confidence_label", "type": "str", "description": "Human-readable label derived from raw 0–10 score: HIGH (>=8), MODERATE (>=5), LOW (>=1), IMPOSSIBLE (0)." }
+        { "name": "confidence_label", "type": "str", "description": "Human-readable label: HIGH (>=8), MODERATE (>=5), LOW (>=1), IMPOSSIBLE (0)." }
       ],
       "methods": [
         { "name": "format_report", "signature": "() -> str", "description": "Multi-line box-drawing report suitable for terminal output." }
@@ -280,7 +277,7 @@
       "frozen": true,
       "internal": true,
       "fields": [
-        { "name": "score",       "type": "int", "description": "DOMScorer best score (raw scaled integer, not yet normalized)." },
+        { "name": "score",       "type": "int", "description": "DOMScorer best score (scaled integer)." },
         { "name": "name",        "type": "str", "description": "Best candidate element name." },
         { "name": "xpath",       "type": "str", "description": "Best candidate xpath (for highlight routing)." },
         { "name": "frame_index", "type": "int", "description": "Frame index into page.frames." }
@@ -301,27 +298,13 @@
       "file": "manul_engine/explain_next.py",
       "signature": "(elements, step, search_texts, target_field) -> _HeuristicHit | None",
       "async": false,
-      "description": "Run DOMScorer against the snapshot to find the best candidate. Strictly read-only — no Playwright calls. Returns None when no elements available.",
+      "description": "Run DOMScorer against the snapshot to find the best candidate. Strictly read-only — no input/CDP mutations. Returns None when no elements available.",
       "scoringCall": "score_elements(elements, step, mode, search_texts, target_field, is_blind, learned_elements={}, last_xpath=None, explain=False)"
     }
   },
 
-  "llmIntegration": {
-    "systemPrompt": "WHAT_IF_SYSTEM_PROMPT",
-    "description": "Score-and-Explain prompt that receives page context, last executed step, and hypothetical step. LLM returns JSON with score (int 0–10, raw), target_found, target_element, explanation, risk, suggestion. The engine normalizes score to [0.0, 1.0] via _result_to_dict() before emitting to the extension.",
-    "responseSchema": {
-      "score": "int 0–10",
-      "target_found": "bool",
-      "target_element": "string | null",
-      "explanation": "string",
-      "risk": "string",
-      "suggestion": "string | null"
-    },
-    "fallback": "When LLM is NullProvider or call_json returns None, _heuristic_only_result() produces a deterministic WhatIfResult from DOMScorer data alone."
-  },
-
   "safetyGuarantees": {
-    "readOnly": "evaluate() never mutates page state. Only read-only Playwright calls (url, title, evaluate for snapshot/text) are used.",
+    "readOnly": "evaluate() never mutates page state. Only read-only CDP calls (url, title, evaluate for snapshot/text) are used.",
     "noNavigation": "No page.goto(), page.click(), page.fill(), or any navigation-triggering calls.",
     "highlightOnly": "The only visual side effect is _debug_highlight (CSS attribute + style tag) which is cleanly removable via _clear_debug_highlight.",
     "exceptionSafety": "All page interactions are wrapped in try/except (OSError, RuntimeError) to handle page destruction gracefully.",
@@ -329,7 +312,7 @@
   },
 
   "testCoverage": {
-    "file": "manul_engine/test/test_53_explain_next.py",
+    "file": "manul_engine/test/test_49_explain_next.py",
     "assertions": 112,
     "testCount": 36,
     "categories": [
@@ -337,12 +320,11 @@
       "WhatIfResult confidence_label property",
       "WhatIfResult format_report() output",
       "_heuristic_pre_check scoring pipeline",
-      "ExplainNextDebugger.evaluate() with NullProvider (heuristics-only)",
+      "ExplainNextDebugger.evaluate() (deterministic, heuristics-only)",
       "ExplainNextDebugger._heuristic_only_result() score mapping",
       "System step type overrides",
       "ExplainNextDebugger.history accumulation",
       "_HeuristicHit dataclass",
-      "WHAT_IF_SYSTEM_PROMPT content validation",
       "_DebugMixin._EXPLAIN_NEXT_MARKER wire format",
       "_DebugMixin._result_to_dict() serialization",
       "Extension protocol explain-next token (current step, overridden step, malformed JSON, multiple calls)",

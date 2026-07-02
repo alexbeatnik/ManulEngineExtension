@@ -9,13 +9,7 @@ import { findManulExecutable, runHuntFileDebugPanel, getHuntBreakpointLines, che
 import { DebugControlPanel } from "./debugControlPanel";
 import { ConfigPanelProvider, generateConfigCommand } from "./configPanel";
 import { StepBuilderProvider, newHuntFileCommand, insertSetupCommand, insertTeardownCommand, insertInlineCallCommand } from "./stepBuilderPanel";
-import {
-  CacheTreeProvider,
-  CacheItem,
-  clearAllCacheCommand,
-  clearSiteCacheCommand,
-} from "./cacheTreeProvider";
-import { DEBUG_TERMINAL_NAME, TERMINAL_NAME, getConfigFileName } from "./constants";
+import { DEBUG_TERMINAL_NAME, TERMINAL_NAME } from "./constants";
 import { getManulDslCommands, getManulDslContextSuggestions, RE_METADATA, RE_HOOK_OPEN, RE_HOOK_CLOSE } from "./shared";
 import { detectRuntimeType, ManulRuntimeType } from "./runtimeDetector";
 import { HuntDocumentFormatter } from "./formatter";
@@ -210,13 +204,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     )
   );
 
-  // ── Cache Tree View ────────────────────────────────────────────────────────
-  const cacheProvider = new CacheTreeProvider();
-  const cacheView = vscode.window.createTreeView("manul.cacheView", {
-    treeDataProvider: cacheProvider,
-    showCollapseAll: true,
-  });
-  context.subscriptions.push(cacheView);
 
   // ── Commands ───────────────────────────────────────────────────────────────
   context.subscriptions.push(
@@ -325,36 +312,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       terminal.sendText("h");
     }),
 
-    vscode.commands.registerCommand("manul.refreshCache", () =>
-      cacheProvider.refresh()
-    ),
-
-    vscode.commands.registerCommand(
-      "manul.clearAllCache",
-      () => clearAllCacheCommand(cacheProvider)
-    ),
-
-    vscode.commands.registerCommand(
-      "manul.clearSiteCache",
-      (item: CacheItem) => clearSiteCacheCommand(item, cacheProvider)
-    ),
-
     vscode.commands.registerCommand("manul-engine.openScheduler", () =>
       SchedulerPanel.render(context.extensionUri)
     )
   );
-
-  // Refresh cache view when workspace folders change
-  context.subscriptions.push(
-    vscode.workspace.onDidChangeWorkspaceFolders(() => cacheProvider.refresh())
-  );
-
-  // Refresh config view when the config file changes
-  const configWatcher = vscode.workspace.createFileSystemWatcher(
-    `**/${getConfigFileName()}`
-  );
-  context.subscriptions.push(configWatcher);
-  configWatcher.onDidChange(() => cacheProvider.refresh());
 
   // ── Engine version check (fire-and-forget at startup) ──────────────────────
   // Resolves the executable path once to avoid a duplicate shell probe, then

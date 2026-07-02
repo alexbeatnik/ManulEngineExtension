@@ -13,11 +13,11 @@ interface RuntimeInfo {
 const _runtimeCache = new Map<string, RuntimeInfo>();
 
 /**
- * Detect whether the workspace uses ManulEngine (Python) or ManulHeart (Go).
+ * Detect whether the workspace uses ManulEngine (Python) or ManulEngine (Go).
  *
  * Detection order:
- *  1. If a `go.mod` exists in the workspace root → Go (ManulHeart).
- *  2. If a `pyproject.toml` / `setup.py` / `requirements.txt` exists → Python (ManulEngine).
+ *  1. If a `go.mod` exists in the workspace root → ManulEngine (Go).
+ *  2. If a `pyproject.toml` / `setup.py` / `requirements.txt` exists → ManulEngine (Python).
  *  3. Run `manul --version` and inspect the output string:
  *     - contains "heart" or "manul-heart" → Go
  *     - otherwise → Python

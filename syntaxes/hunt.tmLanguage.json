@@ -93,7 +93,7 @@
     },
     "loop-keyword": {
       "name": "keyword.control.loop.hunt",
-      "match": "(?i)\\b(REPEAT|FOR\\s+EACH|WHILE|TIMES)\\b"
+      "match": "(?i)\\b(REPEAT|FOR\\s+EACH|WHILE|TIMES|END\\s*(?:IF|REPEAT|WHILE|FOR(?:\\s+EACH)?))\\b"
     },
     "set-command": {
       "name": "meta.set-command.hunt",
@@ -111,7 +111,7 @@
     },
     "system-keyword": {
       "name": "storage.type.hunt",
-      "match": "(?i)\\b(NAVIGATE to|NAVIGATE|OPEN\\s+APP|EXTRACT|SCROLL DOWN|SCROLL|PRESS ENTER|PRESS|RIGHT CLICK|UPLOAD|MOCK\\s+(?:GET|POST|PUT|PATCH|DELETE)|WAIT FOR RESPONSE|WAIT FOR|WAIT|DOUBLE CLICK|CLICK|HOVER|CALL PYTHON|SCAN PAGE|SET|PRINT|DEBUG VARS|DEBUG|PAUSE)\\b"
+      "match": "(?i)\\b(NAVIGATE to|NAVIGATE|OPEN\\s+APP|EXTRACT|SCROLL DOWN|SCROLL|PRESS ENTER|PRESS|RIGHT CLICK|UPLOAD|MOCK\\s+(?:GET|POST|PUT|PATCH|DELETE)|WAIT FOR RESPONSE|WAIT FOR|WAIT|DOUBLE CLICK|CLICK|HOVER|CALL PYTHON|CALL GO|SCAN PAGE|SET|PRINT|SCREENSHOT|DEBUG VARS|DEBUG|PAUSE)\\b"
     },
     "action-verb": {
       "name": "entity.name.function.action.hunt",
