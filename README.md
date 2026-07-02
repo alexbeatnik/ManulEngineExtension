@@ -15,7 +15,7 @@
 
 Write browser automation in plain English. Run it, debug it, and understand every decision the engine makes — all without leaving VS Code.
 
-> **Dual runtime support.** This extension works with both **ManulEngine** (Python + Playwright) and **ManulEngine (Go)** (Go + CDP). It auto-detects which runtime your workspace uses by inspecting `go.mod`, `pyproject.toml`, or the `manul --version` output string.
+> **Dual runtime support.** This extension works with both **ManulEngine** (Python + CDP) and **ManulEngine (Go)** (Go + CDP). It auto-detects which runtime your workspace uses by inspecting `go.mod` / `pyproject.toml`. Both runtimes drive a system-installed Chrome/Chromium directly over the Chrome DevTools Protocol — no Playwright.
 
 > **Alpha.** Solo-developed and actively battle-tested. Feature-rich, not yet hardened across every edge case. The goal is transparent execution and strong debugging ergonomics, not inflated claims.
 
@@ -37,11 +37,11 @@ Write browser automation in plain English. Run it, debug it, and understand ever
 
 ### 1. Install the runtime
 
-**ManulEngine (Python + Playwright):**
+**ManulEngine (Python + CDP):**
 
 ```bash
-pip install manul-engine==0.0.9.30
-playwright install chromium
+pip install manul-engine==0.1.0
+# Requires a system-installed Google Chrome / Chromium on PATH.
 ```
 
 **ManulEngine (Go + CDP):**
@@ -205,12 +205,23 @@ async def handle_datepicker(page, action_type, value):
 // controls/booking.go
 package controls
 
-import "github.com/manulengineer/manulheart/pkg/runtime"
+import (
+    "context"
+    "fmt"
+
+    "github.com/alexbeatnik/ManulEngineGo/pkg/browser"
+    "github.com/alexbeatnik/ManulEngineGo/pkg/runtime"
+)
 
 func init() {
-    runtime.RegisterCustomControl("Checkout Page", "React Datepicker", func(ctx runtime.ControlContext) error {
-        return ctx.Page.Fill(".react-datepicker__input-container input", ctx.Value)
-    })
+    runtime.RegisterCustomControl("Checkout Page", "React Datepicker",
+        func(ctx context.Context, page browser.Page, inv runtime.CustomControlInvocation) error {
+            js := fmt.Sprintf(
+                `document.querySelector('.react-datepicker__input-container input').value = %q`,
+                inv.Value)
+            _, err := page.EvalJS(ctx, js)
+            return err
+        })
 }
 ```
 
@@ -341,7 +352,7 @@ STEP 3: Retry checkout
 | Component | Role | Links |
 |-----------|------|-------|
 | **ManulEngine** | Deterministic automation runtime (Python). Heuristic element resolver, `.hunt` DSL, CLI runner. | [PyPI](https://pypi.org/project/manul-engine/) · [GitHub](https://github.com/alexbeatnik/ManulEngine) |
-| **ManulEngine (Go)** | Deterministic automation runtime (Go). CDP-based, zero external dependencies, goroutine parallelism. | [GitHub](https://github.com/alexbeatnik/ManulEngine (Go)) |
+| **ManulEngine (Go)** | Deterministic automation runtime (Go). CDP-based, zero external dependencies, goroutine parallelism. | [GitHub](https://github.com/alexbeatnik/ManulEngineGo) |
 | **Manul Engine Extension** | VS Code extension for ManulEngine & ManulEngine (Go) with debug panel, explain mode, and Test Explorer integration. | [Marketplace](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-engine) · [Open VSX](https://open-vsx.org/extension/manul-engine/manul-engine) · [GitHub](https://github.com/alexbeatnik/ManulEngineExtension) |
 | **ManulMcpServer** | MCP bridge that gives Copilot Chat and other agents access to ManulEngine. | [Marketplace](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-mcp-server) · [Open VSX](https://open-vsx.org/extension/manul-engine/manul-mcp-server) · [GitHub](https://github.com/alexbeatnik/ManulMcpServer) |
 | **ManulAI Local Agent** | Autonomous AI agent for browser automation, powered by ManulEngine. | [Marketplace](https://marketplace.visualstudio.com/items?itemName=manul-engine.manulai-local-agent) · [Open VSX](https://open-vsx.org/extension/manul-engine/manulai-local-agent) · [GitHub](https://github.com/alexbeatnik/ManulAI-local-agent) |
@@ -376,7 +387,7 @@ Try the extension. [File an issue](https://github.com/alexbeatnik/ManulEngineExt
 
 - **Dual runtime support — ManulEngine (Python) + ManulEngine (Go).** The extension auto-detects which runtime a workspace uses via `go.mod` / `pyproject.toml` heuristics and the `manul --version` output string.
 - **Runtime-aware DSL commands.** `CALL PYTHON` is hidden and `CALL GO` is surfaced when a Go workspace is detected. Hook block scaffolds, inline-call snippets, and validator diagnostics all adapt automatically.
-- **Runtime-aware doctor command.** `Manul Doctor` now checks for Go / ManulEngine (Go) when a Go workspace is open, and Python / Playwright / ManulEngine for Python workspaces.
+- **Runtime-aware doctor command.** `Manul Doctor` now checks for Go / ManulEngine (Go) when a Go workspace is open, and Python / ManulEngine / system Chrome for Python workspaces.
 - **Version check covers both runtimes.** Minimum versions: ManulEngine `0.1.0`, ManulEngine (Go) `0.1.0`.
 - Bumped extension manifest to `0.1.0`.
 
