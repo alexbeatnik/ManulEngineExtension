@@ -4,8 +4,8 @@
 
 # ManulEngine & ManulEngine (Go) — VS Code Extension
 
-[![Manul Engine Extension](https://img.shields.io/visual-studio-marketplace/v/alexbeatnik.manul-engine?label=Manul%20Engine%20Extension&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=alexbeatnik.manul-engine)
-[![Manul Engine Extension (Open VSX)](https://img.shields.io/open-vsx/v/alexbeatnik/manul-engine?label=Open%20VSX&logo=eclipse-ide)](https://open-vsx.org/extension/alexbeatnik/manul-engine)
+[![Manul Engine Extension](https://img.shields.io/visual-studio-marketplace/v/alexbeatnik.manul-engine-extension?label=Manul%20Engine%20Extension&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=alexbeatnik.manul-engine-extension)
+[![Manul Engine Extension (Open VSX)](https://img.shields.io/open-vsx/v/alexbeatnik/manul-engine-extension?label=Open%20VSX&logo=eclipse-ide)](https://open-vsx.org/extension/alexbeatnik/manul-engine-extension)
 [![PyPI](https://img.shields.io/pypi/v/manul-engine?label=PyPI&logo=pypi)](https://pypi.org/project/manul-engine/)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/manul-engine?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/manul-engine)
 [![MCP Server](https://img.shields.io/visual-studio-marketplace/v/manul-engine.manul-mcp-server?label=MCP%20Server&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-mcp-server)
@@ -53,7 +53,7 @@ go build -o manul ./cmd/manul   # or: make build && make install
 ### 2. Install the extension
 
 ```bash
-code --install-extension alexbeatnik.manul-engine
+code --install-extension alexbeatnik.manul-engine-extension
 ```
 
 ### 3. Create a hunt file
@@ -353,7 +353,7 @@ STEP 3: Retry checkout
 |-----------|------|-------|
 | **ManulEngine** | Deterministic automation runtime (Python). Heuristic element resolver, `.hunt` DSL, CLI runner. | [PyPI](https://pypi.org/project/manul-engine/) · [GitHub](https://github.com/alexbeatnik/ManulEngine) |
 | **ManulEngine (Go)** | Deterministic automation runtime (Go). CDP-based, zero external dependencies, goroutine parallelism. | [GitHub](https://github.com/alexbeatnik/ManulEngineGo) |
-| **Manul Engine Extension** | VS Code extension for ManulEngine & ManulEngine (Go) with debug panel, explain mode, and Test Explorer integration. | [Marketplace](https://marketplace.visualstudio.com/items?itemName=alexbeatnik.manul-engine) · [Open VSX](https://open-vsx.org/extension/alexbeatnik/manul-engine) · [GitHub](https://github.com/alexbeatnik/ManulEngineExtension) |
+| **Manul Engine Extension** | VS Code extension for ManulEngine & ManulEngine (Go) with debug panel, explain mode, and Test Explorer integration. | [Marketplace](https://marketplace.visualstudio.com/items?itemName=alexbeatnik.manul-engine-extension) · [Open VSX](https://open-vsx.org/extension/alexbeatnik/manul-engine-extension) · [GitHub](https://github.com/alexbeatnik/ManulEngineExtension) |
 | **ManulMcpServer** | MCP bridge that gives Copilot Chat and other agents access to ManulEngine. | [Marketplace](https://marketplace.visualstudio.com/items?itemName=manul-engine.manul-mcp-server) · [Open VSX](https://open-vsx.org/extension/manul-engine/manul-mcp-server) · [GitHub](https://github.com/alexbeatnik/ManulMcpServer) |
 | **ManulAI Local Agent** | Autonomous AI agent for browser automation, powered by ManulEngine. | [Marketplace](https://marketplace.visualstudio.com/items?itemName=manul-engine.manulai-local-agent) · [Open VSX](https://open-vsx.org/extension/manul-engine/manulai-local-agent) · [GitHub](https://github.com/alexbeatnik/ManulAI-local-agent) |
 

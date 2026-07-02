@@ -1,5 +1,5 @@
 {
-  "name": "manul-engine",
+  "name": "manul-engine-extension",
   "displayName": "ManulEngine",
   "description": "Write browser automation in plain English. ManulEngine & ManulEngine (Go) extension for VS Code — deterministic DOM heuristics, no selectors, no cloud APIs, no AI required.",
   "version": "0.1.0",
